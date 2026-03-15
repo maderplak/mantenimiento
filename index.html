@@ -637,12 +637,12 @@ function renderGerente() {
   const content = document.getElementById('main-content');
   let html = '';
 
-  const critical  = tickets.filter(t => t.prioridad === 'Pto. Crítico' && !esTerminado(t.estado)).length;
-  const inCurso   = tickets.filter(t => t.estado === 'En curso').length;
-  const terminados = tickets.filter(t => esTerminado(t.estado)).length;
+  const critical   = tickets.filter(t => t.prioridad === 'Pto. Crítico' && !esTerminado(t.estado)).length;
+  const inCurso    = tickets.filter(t => t.estado === 'En curso').length;
+  const pendientes = tickets.filter(t => t.estado === 'Pendiente').length;
 
   if (currentTab === 'pendientes') {
-    html += statsBar(critical, inCurso, terminados);
+    html += statsBar(critical, inCurso, pendientes);
     html += filtersBar(['todos','Pto. Crítico','En curso','Pendiente','Vehículos','Edilicia','Máquinas']);
     const filtered = filterTickets(tickets.filter(t => !esTerminado(t.estado)));
     html += `<div class="cards-list">`;
@@ -687,7 +687,7 @@ function statsBar(critical, inCurso, countTerminados) {
   return `<div class="stats-bar">
     <div class="stat-card critical"><div class="stat-num">${critical}</div><div class="stat-label">CRÍTICOS</div></div>
     <div class="stat-card progress"><div class="stat-num">${inCurso}</div><div class="stat-label">EN CURSO</div></div>
-    <div class="stat-card done"><div class="stat-num">${countTerminados}</div><div class="stat-label">TERMINADOS</div></div>
+    <div class="stat-card done"><div class="stat-num">${countTerminados}</div><div class="stat-label">PENDIENTES</div></div>
   </div>`;
 }
 
