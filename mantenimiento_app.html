@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f0f0f">
+<title>Mantenimiento</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --border: #2e2e2e;
+    --text: #f0ede8;
+    --muted: #7a7570;
+    --accent: #e8c547;
+    --accent-dim: rgba(232,197,71,0.12);
+    --red: #e85d4a;
+    --red-dim: rgba(232,93,74,0.12);
+    --green: #5dbc89;
+    --green-dim: rgba(93,188,137,0.12);
+    --blue: #5b9cf6;
+    --blue-dim: rgba(91,156,246,0.12);
+    --orange: #f09050;
+    --orange-dim: rgba(240,144,80,0.12);
+    --radius: 14px;
+    --radius-sm: 8px;
+    --font-display: 'Syne', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-display); overflow: hidden; }
+
+  /* ── SPLASH ── */
+  #splash {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 100; gap: 12px; transition: opacity 0.4s;
+  }
+  #splash.hide { opacity: 0; pointer-events: none; }
+  .splash-logo { font-size: 42px; font-weight: 800; letter-spacing: -2px; color: var(--accent); }
+  .splash-sub { font-size: 13px; color: var(--muted); font-family: var(--font-mono); letter-spacing: 0.08em; }
+
+  /* ── LOGIN ── */
+  #login {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 90; padding: 24px; gap: 0;
+  }
+  #login.hidden { display: none; }
+  .login-card {
+    width: 100%; max-width: 360px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 32px 28px; display: flex; flex-direction: column; gap: 20px;
+  }
+  .login-title { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+  .login-title span { color: var(--accent); }
+  .login-roles { display: flex; gap: 10px; }
+  .role-btn {
+    flex: 1; padding: 12px 8px; border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border); background: transparent;
+    color: var(--muted); font-family: var(--font-display); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.18s; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .role-btn .icon { font-size: 22px; }
+  .role-btn:hover { border-color: var(--accent); color: var(--text); }
+  .role-btn.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+  .login-btn {
+    width: 100%; padding: 14px; border-radius: var(--radius-sm);
+    background: var(--accent); color: #0f0f0f; font-family: var(--font-display);
+    font-weight: 700; font-size: 15px; border: none; cursor: pointer;
+    transition: opacity 0.15s; letter-spacing: 0.02em;
+  }
+  .login-btn:hover { opacity: 0.88; }
+
+  /* ── APP SHELL ── */
+  #app { display: none; flex-direction: column; height: 100%; }
+  #app.visible { display: flex; }
+
+  /* ── HEADER ── */
+  .header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .header-left { display: flex; flex-direction: column; gap: 2px; }
+  .header-brand { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+  .header-brand span { color: var(--accent); }
+  .header-role {
+    font-family: var(--font-mono); font-size: 10px; color: var(--muted);
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+  .icon-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--surface); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 16px; transition: background 0.15s;
+  }
+  .icon-btn:hover { background: var(--surface2); }
+  .notif-badge {
+    position: relative;
+  }
+  .notif-badge::after {
+    content: ''; position: absolute; top: 6px; right: 6px;
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--red); border: 1.5px solid var(--bg);
+  }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex; padding: 10px 20px 0;
+    gap: 4px; flex-shrink: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    padding: 8px 16px 10px; font-size: 13px; font-weight: 600;
+    color: var(--muted); cursor: pointer; border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    border: 1px solid transparent; border-bottom: none;
+    transition: all 0.15s; position: relative; top: 1px;
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--font-display);
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    color: var(--text); background: var(--surface);
+    border-color: var(--border); border-bottom-color: var(--surface);
+  }
+  .tab-count {
+    min-width: 18px; height: 18px; border-radius: 9px;
+    background: var(--surface2); font-size: 10px; font-family: var(--font-mono);
+    display: flex; align-items: center; justify-content: center; padding: 0 4px;
+  }
+  .tab.active .tab-count { background: var(--accent-dim); color: var(--accent); }
+
+  /* ── MAIN CONTENT ── */
+  .content {
+    flex: 1; overflow-y: auto; padding: 16px 20px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── FILTERS BAR ── */
+  .filters {
+    display: flex; gap: 8px; margin-bottom: 16px;
+    overflow-x: auto; padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+  .filters::-webkit-scrollbar { display: none; }
+  .filter-chip {
+    flex-shrink: 0; padding: 6px 14px; border-radius: 20px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--muted); font-family: var(--font-mono); font-size: 11px;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap; letter-spacing: 0.04em;
+  }
+  .filter-chip:hover { border-color: var(--accent); color: var(--text); }
+  .filter-chip.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 10px; margin-bottom: 16px;
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 12px 14px;
+  }
+  .stat-num { font-size: 24px; font-weight: 800; letter-spacing: -1px; line-height: 1; }
+  .stat-label { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 4px; letter-spacing: 0.06em; }
+  .stat-card.critical .stat-num { color: var(--red); }
+  .stat-card.progress .stat-num { color: var(--orange); }
+  .stat-card.done .stat-num { color: var(--green); }
+
+  /* ── CARDS ── */
+  .cards-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .ticket-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+    cursor: pointer; transition: all 0.18s;
+    position: relative; overflow: hidden;
+  }
+  .ticket-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px; background: var(--border);
+    transition: background 0.15s;
+  }
+  .ticket-card.critico::before { background: var(--red); }
+  .ticket-card.en-curso::before { background: var(--orange); }
+  .ticket-card.pendiente::before { background: var(--muted); }
+  .ticket-card.resuelto::before { background: var(--green); }
+  .ticket-card:hover { border-color: var(--accent); background: var(--surface2); }
+
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .card-id { font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 0.08em; }
+  .badges { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .badge {
+    padding: 3px 8px; border-radius: 4px;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+    letter-spacing: 0.04em; white-space: nowrap;
+  }
+  .badge.critico { background: var(--red-dim); color: var(--red); }
+  .badge.otros { background: var(--surface2); color: var(--muted); }
+  .badge.en-curso { background: var(--orange-dim); color: var(--orange); }
+  .badge.pendiente { background: var(--surface2); color: var(--muted); }
+  .badge.resuelto { background: var(--green-dim); color: var(--green); }
+  .badge.hoy { background: var(--accent-dim); color: var(--accent); }
+  .badge.tipo { background: var(--blue-dim); color: var(--blue); }
+
+  .card-desc {
+    font-size: 13px; color: var(--text); line-height: 1.45;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .card-notas {
+    display: flex; align-items: flex-start; gap: 8px;
+    background: var(--surface2); border-left: 2px solid var(--orange);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 7px 10px; margin-bottom: 10px;
+  }
+  .card-notas-label {
+    font-family: var(--font-mono); font-size: 9px; color: var(--orange);
+    letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; margin-top: 1px;
+  }
+  .card-notas-text {
+    font-size: 12px; color: var(--muted); line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .card-meta { display: flex; align-items: center; justify-content: space-between; }
+  .card-who { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+  .card-date { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+
+  .assign-btn {
+    width: 100%; margin-top: 10px; padding: 9px;
+    border-radius: var(--radius-sm); background: var(--accent-dim);
+    border: 1px solid var(--accent); color: var(--accent);
+    font-family: var(--font-display); font-size: 12px; font-weight: 700;
+    cursor: pointer; transition: all 0.15s; letter-spacing: 0.03em;
+  }
+  .assign-btn:hover { background: var(--accent); color: #0f0f0f; }
+  .assign-btn.assigned { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 10px; padding: 48px 20px;
+    color: var(--muted); text-align: center;
+  }
+  .empty-icon { font-size: 40px; opacity: 0.4; }
+  .empty-text { font-size: 14px; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+    z-index: 200; display: flex; align-items: flex-end;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    width: 100%; background: var(--surface); border-radius: var(--radius) var(--radius) 0 0;
+    border: 1px solid var(--border); border-bottom: none;
+    padding: 20px; max-height: 92vh; overflow-y: auto;
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(.32,.72,0,1);
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
+  .modal-title { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+  .modal-id { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-bottom: 18px; }
+  .modal-section { margin-bottom: 16px; }
+  .modal-label { font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+  .modal-value { font-size: 14px; color: var(--text); line-height: 1.5; }
+  .modal-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .avance-section { margin-bottom: 20px; }
+  .avance-label { font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+  .avance-bar-bg { height: 6px; background: var(--surface2); border-radius: 3px; margin-bottom: 6px; }
+  .avance-bar-fill { height: 6px; border-radius: 3px; background: var(--accent); transition: width 0.4s; }
+  .avance-val { font-family: var(--font-mono); font-size: 12px; color: var(--accent); }
+
+  .notas-textarea {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 12px; color: var(--text);
+    font-family: var(--font-display); font-size: 13px; resize: none;
+    min-height: 72px; outline: none; transition: border-color 0.15s;
+  }
+  .notas-textarea:focus { border-color: var(--accent); }
+  .notas-add-btn {
+    width: 100%; padding: 10px; border-radius: var(--radius-sm);
+    background: transparent; border: 1px dashed var(--border);
+    color: var(--muted); font-family: var(--font-display); font-size: 13px;
+    cursor: pointer; transition: all 0.15s; margin-top: 8px;
+  }
+  .notas-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .historial { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .historial-entry {
+    border-left: 2px solid var(--border); padding: 8px 12px;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    background: var(--surface2);
+  }
+  .historial-entry:first-child { border-left-color: var(--orange); }
+  .historial-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .historial-autor { font-family: var(--font-mono); font-size: 10px; color: var(--orange); }
+  .historial-fecha { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+  .historial-texto { font-size: 13px; color: var(--text); line-height: 1.45; }
+
+  .estado-selector { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .estado-opt {
+    flex: 1; min-width: 80px; padding: 10px 8px; border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border); background: transparent;
+    font-family: var(--font-display); font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; text-align: center;
+    color: var(--muted);
+  }
+  .estado-opt:hover { border-color: var(--accent); color: var(--text); }
+  .estado-opt.active-pendiente { border-color: var(--muted); background: rgba(122,117,112,0.15); color: var(--text); }
+  .estado-opt.active-en-curso { border-color: var(--orange); background: var(--orange-dim); color: var(--orange); }
+  .estado-opt.active-resuelto { border-color: var(--green); background: var(--green-dim); color: var(--green); }
+
+  .modal-save-btn {
+    width: 100%; padding: 14px; border-radius: var(--radius-sm);
+    background: var(--accent); color: #0f0f0f; font-family: var(--font-display);
+    font-weight: 700; font-size: 15px; border: none; cursor: pointer;
+    transition: opacity 0.15s; letter-spacing: 0.02em; margin-top: 8px;
+  }
+  .modal-save-btn:hover { opacity: 0.88; }
+  .modal-save-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .modal-save-btn.saving { opacity: 0.6; }
+
+  /* ── CONFIG MODAL ── */
+  .config-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .config-label { font-family: var(--font-mono); font-size: 11px; color: var(--muted); letter-spacing: 0.08em; }
+  .config-input {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 11px 14px;
+    color: var(--text); font-family: var(--font-mono); font-size: 12px;
+    outline: none; transition: border-color 0.15s; width: 100%;
+  }
+  .config-input:focus { border-color: var(--accent); }
+  .config-hint { font-family: var(--font-mono); font-size: 10px; color: var(--muted); line-height: 1.5; }
+
+  /* ── VIEW TOGGLE (gerente) ── */
+  .view-toggle {
+    display: flex; gap: 0; margin-bottom: 16px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 3px;
+  }
+  .view-btn {
+    flex: 1; padding: 7px; border-radius: 6px;
+    border: none; background: transparent; cursor: pointer;
+    font-family: var(--font-mono); font-size: 11px; color: var(--muted);
+    transition: all 0.15s; letter-spacing: 0.04em;
+  }
+  .view-btn.active { background: var(--surface2); color: var(--text); }
+
+  /* ── TODAY BANNER ── */
+  .today-banner {
+    background: var(--accent-dim); border: 1px solid var(--accent);
+    border-radius: var(--radius-sm); padding: 10px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .today-left { display: flex; flex-direction: column; gap: 2px; }
+  .today-label { font-family: var(--font-mono); font-size: 10px; color: var(--accent); letter-spacing: 0.1em; }
+  .today-val { font-size: 15px; font-weight: 700; color: var(--accent); }
+  .today-right { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+  /* ── BOTTOM NAV (técnico) ── */
+  .bottom-nav {
+    display: none; /* only shown for tecnico */
+    padding: 10px 20px; border-top: 1px solid var(--border);
+    background: var(--surface); flex-shrink: 0;
+  }
+  .bottom-nav.visible { display: flex; gap: 10px; }
+  .nav-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    gap: 3px; cursor: pointer; padding: 6px;
+    border-radius: var(--radius-sm); transition: background 0.15s;
+  }
+  .nav-item:hover { background: var(--surface2); }
+  .nav-item.active { background: var(--accent-dim); }
+  .nav-icon { font-size: 20px; }
+  .nav-label { font-family: var(--font-mono); font-size: 9px; color: var(--muted); letter-spacing: 0.06em; }
+  .nav-item.active .nav-label { color: var(--accent); }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 24px; padding: 10px 20px;
+    font-family: var(--font-mono); font-size: 12px; color: var(--text);
+    opacity: 0; transition: all 0.3s; z-index: 300; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: var(--green); color: var(--green); }
+  .toast.error { border-color: var(--red); color: var(--red); }
+
+  /* ── SCROLLBAR ── */
+  .content::-webkit-scrollbar { width: 4px; }
+  .content::-webkit-scrollbar-track { background: transparent; }
+  .content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .ticket-card { animation: fadeIn 0.2s ease both; }
+  .ticket-card:nth-child(1) { animation-delay: 0ms; }
+  .ticket-card:nth-child(2) { animation-delay: 40ms; }
+  .ticket-card:nth-child(3) { animation-delay: 80ms; }
+  .ticket-card:nth-child(4) { animation-delay: 120ms; }
+  .ticket-card:nth-child(5) { animation-delay: 160ms; }
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="splash-logo">MANT.</div>
+  <div class="splash-sub">sistema de mantenimiento</div>
+</div>
+
+<!-- LOGIN -->
+<div id="login" class="hidden">
+  <div class="login-card">
+    <div>
+      <div class="login-title">Hola 👋<br>¿Quién sos<span>?</span></div>
+    </div>
+    <div class="login-roles">
+      <button class="role-btn active" id="role-gerente" onclick="selectRole('gerente')">
+        <span class="icon">🧑‍💼</span>
+        Gerente
+      </button>
+      <button class="role-btn" id="role-tecnico" onclick="selectRole('tecnico')">
+        <span class="icon">🔧</span>
+        Técnico
+      </button>
+    </div>
+    <button class="login-btn" onclick="enterApp()">Entrar →</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="header-brand">MANT<span>.</span></div>
+      <div class="header-role" id="role-label">gerente</div>
+    </div>
+    <div class="header-actions">
+      <div class="icon-btn" onclick="openConfig()" title="Configurar Sheet">⚙️</div>
+      <div class="icon-btn notif-badge" id="notif-btn" onclick="showToast('Sin notificaciones nuevas', '')">🔔</div>
+      <div class="icon-btn" onclick="logout()">👤</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" id="tabs-container">
+    <!-- gerente tabs injected by JS -->
+  </div>
+
+  <!-- Content -->
+  <div class="content" id="main-content">
+  </div>
+
+  <!-- Bottom nav técnico -->
+  <div class="bottom-nav" id="bottom-nav">
+    <div class="nav-item active" onclick="tecnicoView('asignados')">
+      <div class="nav-icon">📋</div>
+      <div class="nav-label">MIS TRABAJOS</div>
+    </div>
+    <div class="nav-item" onclick="tecnicoView('historial')">
+      <div class="nav-icon">📁</div>
+      <div class="nav-label">HISTORIAL</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOnBg(event)">
+  <div class="modal" id="modal-body">
+    <div class="modal-handle"></div>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<!-- MODAL CONFIG -->
+<div class="modal-overlay" id="config-overlay" onclick="closeConfigOnBg(event)">
+  <div class="modal" id="config-body">
+    <div class="modal-handle"></div>
+    <div id="config-content">
+      <div class="modal-title">Conectar Google Sheet</div>
+      <div class="modal-id" style="margin-bottom:20px">Ingresá la URL de tu Apps Script para sincronizar datos en tiempo real.</div>
+      <div class="config-field">
+        <div class="config-label">URL del Apps Script</div>
+        <input class="config-input" id="script-url" type="url" placeholder="https://script.google.com/macros/s/...">
+        <div class="config-hint">Desplegá tu script como app web y pegá la URL acá.<br>Instrucciones incluidas en el archivo README.</div>
+      </div>
+      <div class="config-field">
+        <div class="config-label">Nombre de la hoja</div>
+        <input class="config-input" id="sheet-name" type="text" value="Respuestas de formulario 1" placeholder="Respuestas de formulario 1">
+      </div>
+      <button class="modal-save-btn" onclick="saveConfig()">Guardar y conectar</button>
+      <div style="margin-top:12px">
+        <button class="modal-save-btn" style="background:var(--surface2);color:var(--text);margin-top:8px" onclick="loadDemoData()">Usar datos de demo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────
+let currentRole = 'gerente';
+let currentTab = 'pendientes';
+let currentFilter = 'todos';
+let tickets = [];
+let todayAssigned = [];
+let scriptUrl = localStorage.getItem('mant_script_url') || 'https://script.google.com/macros/s/AKfycbzxLpB0zUBYIgbbs50xze6H6f3YJz3N1pqCvW2kNJ_HJNTq4to1eYkZbp6VfkOV87nk/exec';
+let sheetName = localStorage.getItem('mant_sheet_name') || 'Respuestas de formulario 1';
+let selectedTicket = null;
+
+// ─── DEMO DATA (estructura real de la planilla) ──
+const DEMO = [
+  { id:'TKT-001', estado:'En curso', prioridad:'Pto. Crítico', desc:'Seguimiento de trabajos Agrale.', avance:30, fechaFin:'20/11/2025', tipo:'Reparación de Vehículos', activo:'Camión Agrale', solicitante:'Fabian Molina', email:'operaciones@maderplak.com', notas:[
+    { autor:'Javier (Técnico)', fecha:'20/11/2025 09:15', texto:'Me comuniqué con Fer, están trabajando en el camión. Esperan tenerlo listo para el viernes.' },
+    { autor:'Javier (Técnico)', fecha:'18/11/2025 14:30', texto:'Revisado en taller. Necesita repuesto de freno trasero derecho.' }
+  ], asignadoHoy: false },
+  { id:'TKT-002', estado:'En curso', prioridad:'Otros', desc:'Hacer nueva bajada de compresor.', avance:30, fechaFin:'18/12/2025', tipo:'Reparación de Instalaciones eléctricas', activo:'', solicitante:'Fabian Molina', email:'operaciones@maderplak.com', notas:[
+    { autor:'Javier (Técnico)', fecha:'18/12/2025 11:00', texto:'El trabajo del tablero en la vertical ya está terminado. Resta el cambio de caños de aire comprimido.' }
+  ], asignadoHoy: false },
+  { id:'TKT-003', estado:'Pendiente', prioridad:'Pto. Crítico', desc:'Coordinar reparación parabrisas para sacar la VTV. Vence el 07/02/2026.', avance:30, fechaFin:'12/01/2026', tipo:'Reparación de Vehículos', activo:'Camión Agrale', solicitante:'Fabian Uro', email:'cd.maderplak@gmail.com', notas:[], asignadoHoy: false },
+  { id:'TKT-004', estado:'Pendiente', prioridad:'Otros', desc:'Hacer mueble en escritorio de oficina anexo.', avance:30, fechaFin:'26/01/2026', tipo:'Reparación de Mobiliario', activo:'', solicitante:'Fabian Molina', email:'operaciones@maderplak.com', notas:[], asignadoHoy: false },
+  { id:'TKT-005', estado:'Pendiente', prioridad:'Otros', desc:'Pintar zonas de carga y peatón, y pintar en galpón 3 zona de descarga, almacenamiento de ferretería y zona de carga de pedidos.', avance:30, fechaFin:'07/02/2026', tipo:'Reparación Edilicia', activo:'', solicitante:'Lucas Argañaraz', email:'produccion@maderplak.com', notas:[], asignadoHoy: false },
+  { id:'TKT-006', estado:'En curso', prioridad:'Pto. Crítico', desc:'Hacer seguimiento de trabajos en coleros de repuesto y dejar en condiciones.', avance:30, fechaFin:'18/02/2026', tipo:'Reparación de Máquinas', activo:'Canteadora 1', solicitante:'Fabian Molina', email:'operaciones@maderplak.com', notas:[
+    { autor:'Javier (Técnico)', fecha:'18/02/2026 08:45', texto:'Revisados 3 de 5 coleros. Faltan ajustes menores en los últimos dos.' }
+  ], asignadoHoy: false },
+  { id:'TKT-007', estado:'Pendiente', prioridad:'Pto. Crítico', desc:'Comprar copiadores y kit de carro porta sierra para seccionadora.', avance:30, fechaFin:'18/02/2026', tipo:'Reparación de Máquinas', activo:'Canteadora 2', solicitante:'Fabian Molina', email:'operaciones@maderplak.com', notas:[], asignadoHoy: false },
+  { id:'TKT-008', estado:'En curso', prioridad:'Pto. Crítico', desc:'Antiniebla no funciona de un lado en el Camión Iveco.', avance:30, fechaFin:'20/02/2026', tipo:'Reparación de Vehículos', activo:'Camión Ivecco', solicitante:'Javier Valdez', email:'mantenimiento@maderplak.com', notas:[], asignadoHoy: false },
+  { id:'TKT-009', estado:'Pendiente', prioridad:'Pto. Crítico', desc:'Cambiar teléfono del salón comercial (mostrador). Suena pero no se puede atender.', avance:30, fechaFin:'04/03/2026', tipo:'Reparación de Equipos Informáticos', activo:'', solicitante:'Paola Alvarez', email:'coordinacion@maderplak.com', notas:[], asignadoHoy: false },
+  { id:'TKT-010', estado:'Pendiente', prioridad:'Otros', desc:'TECHO NAVE 2 CON GOTEO. Consultar para resolver, se puso tacho para el goteo.', avance:30, fechaFin:'28/02/2026', tipo:'Reparación Edilicia', activo:'', solicitante:'Fabian Uro', email:'cd.maderplak@gmail.com', notas:[], asignadoHoy: false },
+  { id:'TKT-011', estado:'Pendiente', prioridad:'Otros', desc:'Arreglar filtraciones de agua de los galpones de CC. El sábado quedó en venir Marcos Serrano para revisar.', avance:30, fechaFin:'05/03/2026', tipo:'Reparación Edilicia', activo:'', solicitante:'Lucas Argañaraz', email:'produccion@maderplak.com', notas:[], asignadoHoy: false },
+  { id:'TKT-012', estado:'Pendiente', prioridad:'Pto. Crítico', desc:'Se necesita hacer copia de llave de contacto de encendido. Rota la llave.', avance:30, fechaFin:'06/03/2026', tipo:'Reparación de Vehículos', activo:'AE 2', solicitante:'Sotelo Héctor', email:'soteloale844@gmail.com', notas:[], asignadoHoy: false },
+  { id:'TKT-013', estado:'Pendiente', prioridad:'Otros', desc:'LV - NAVE 1 - OFICINA - TANQUE AGUA - pierde agua tanque arriba de oficina. Contacto con cables. VER URGENTE.', avance:30, fechaFin:'09/03/2026', tipo:'Reparación Edilicia', activo:'', solicitante:'Fabián Uro', email:'cd.maderplak@gmail.com', notas:[], asignadoHoy: false },
+  { id:'TKT-014', estado:'Pendiente', prioridad:'Otros', desc:'Silla de escritorio vencida, dañada e incómoda.', avance:30, fechaFin:'07/03/2026', tipo:'Reparación de Mobiliario', activo:'', solicitante:'Hector Sequeira', email:'admwud.wudweb@gmail.com', notas:[], asignadoHoy: false },
+];
+
+// ─── SPLASH ──────────────────────────────────────
+setTimeout(() => {
+  document.getElementById('splash').classList.add('hide');
+  setTimeout(() => {
+    document.getElementById('splash').style.display = 'none';
+    document.getElementById('login').classList.remove('hidden');
+  }, 400);
+}, 1200);
+
+// ─── LOGIN ───────────────────────────────────────
+function selectRole(role) {
+  currentRole = role;
+  document.getElementById('role-gerente').classList.toggle('active', role === 'gerente');
+  document.getElementById('role-tecnico').classList.toggle('active', role === 'tecnico');
+}
+
+function enterApp() {
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('role-label').textContent = currentRole;
+  initApp();
+}
+
+function logout() {
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('login').classList.remove('hidden');
+  currentTab = 'pendientes';
+  currentFilter = 'todos';
+}
+
+// ─── INIT ─────────────────────────────────────────
+function initApp() {
+  if (scriptUrl) {
+    fetchFromSheet();
+  } else {
+    loadDemoData();
+  }
+  if (currentRole === 'gerente') {
+    renderGerenteTabs();
+    document.getElementById('bottom-nav').classList.remove('visible');
+    renderGerente();
+  } else {
+    renderTecnicoTabs();
+    document.getElementById('bottom-nav').classList.add('visible');
+    renderTecnico('asignados');
+  }
+}
+
+function loadDemoData() {
+  tickets = JSON.parse(JSON.stringify(DEMO));
+  // restore todayAssigned
+  todayAssigned = tickets.filter(t => t.asignadoHoy).map(t => t.id);
+  if (document.getElementById('app').classList.contains('visible')) {
+    closeConfig();
+    renderContent();
+    showToast('Datos de demo cargados ✓', 'success');
+  }
+}
+
+// ─── GERENTE ──────────────────────────────────────
+function renderGerenteTabs() {
+  const pending = tickets.filter(t => t.estado !== 'Resuelto').length;
+  const inProgress = tickets.filter(t => t.estado === 'En curso').length;
+  const today = todayAssigned.length;
+  document.getElementById('tabs-container').innerHTML = `
+    <div class="tab ${currentTab==='pendientes'?'active':''}" onclick="switchTab('pendientes')">
+      Pendientes <span class="tab-count">${pending}</span>
+    </div>
+    <div class="tab ${currentTab==='hoy'?'active':''}" onclick="switchTab('hoy')">
+      Hoy <span class="tab-count">${today}</span>
+    </div>
+    <div class="tab ${currentTab==='historial'?'active':''}" onclick="switchTab('historial')">
+      Todo
+    </div>
+  `;
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  currentFilter = 'todos';
+  renderGerenteTabs();
+  renderGerente();
+}
+
+function renderGerente() {
+  const content = document.getElementById('main-content');
+  let html = '';
+
+  const critical = tickets.filter(t => t.prioridad === 'Pto. Crítico' && t.estado !== 'Resuelto').length;
+  const inCurso = tickets.filter(t => t.estado === 'En curso').length;
+  const resueltos = tickets.filter(t => t.estado === 'Resuelto').length;
+
+  if (currentTab === 'pendientes') {
+    html += statsBar(critical, inCurso, resueltos);
+    html += filtersBar(['todos','Pto. Crítico','En curso','Pendiente','Vehículos','Edilicia','Máquinas']);
+    const filtered = filterTickets(tickets.filter(t => t.estado !== 'Resuelto'));
+    html += `<div class="cards-list">`;
+    if (filtered.length === 0) {
+      html += `<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Todo bajo control</div></div>`;
+    } else {
+      filtered.forEach((t,i) => { html += ticketCard(t, true); });
+    }
+    html += `</div>`;
+  }
+
+  if (currentTab === 'hoy') {
+    const todayTickets = tickets.filter(t => todayAssigned.includes(t.id));
+    html += `<div class="today-banner">
+      <div class="today-left">
+        <div class="today-label">AGENDA DEL DÍA</div>
+        <div class="today-val">${todayTickets.length} trabajo${todayTickets.length !== 1 ? 's' : ''} asignado${todayTickets.length !== 1 ? 's' : ''}</div>
+      </div>
+      <div class="today-right">${new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'short'})}</div>
+    </div>`;
+    html += `<div class="cards-list">`;
+    if (todayTickets.length === 0) {
+      html += `<div class="empty"><div class="empty-icon">📅</div><div class="empty-text">No asignaste trabajos para hoy.<br>Andá a Pendientes y marcá los de hoy.</div></div>`;
+    } else {
+      todayTickets.forEach(t => { html += ticketCard(t, false); });
+    }
+    html += `</div>`;
+  }
+
+  if (currentTab === 'historial') {
+    html += filtersBar(['todos','Pendiente','En curso','Resuelto']);
+    const filtered = filterTickets(tickets);
+    html += `<div class="cards-list">`;
+    filtered.forEach(t => { html += ticketCard(t, false); });
+    html += `</div>`;
+  }
+
+  content.innerHTML = html;
+}
+
+function statsBar(critical, inCurso, resueltos) {
+  return `<div class="stats-bar">
+    <div class="stat-card critical"><div class="stat-num">${critical}</div><div class="stat-label">CRÍTICOS</div></div>
+    <div class="stat-card progress"><div class="stat-num">${inCurso}</div><div class="stat-label">EN CURSO</div></div>
+    <div class="stat-card done"><div class="stat-num">${resueltos}</div><div class="stat-label">RESUELTOS</div></div>
+  </div>`;
+}
+
+function filtersBar(filters) {
+  return `<div class="filters">${filters.map(f =>
+    `<div class="filter-chip ${currentFilter===f?'active':''}" onclick="applyFilter('${f}')">${f}</div>`
+  ).join('')}</div>`;
+}
+
+function filterTickets(list) {
+  if (currentFilter === 'todos') return list;
+  return list.filter(t =>
+    t.prioridad === currentFilter ||
+    t.estado === currentFilter ||
+    t.tipo.includes(currentFilter)
+  );
+}
+
+function applyFilter(f) {
+  currentFilter = f;
+  renderContent();
+}
+
+function renderContent() {
+  if (currentRole === 'gerente') renderGerente();
+  else renderTecnico(currentTab);
+  if (currentRole === 'gerente') renderGerenteTabs();
+}
+
+// ─── TÉCNICO ──────────────────────────────────────
+function renderTecnicoTabs() {
+  document.getElementById('tabs-container').innerHTML = `
+    <div class="tab active" id="tab-mis">Mis trabajos</div>
+  `;
+}
+
+function tecnicoView(view) {
+  currentTab = view;
+  document.querySelectorAll('.nav-item').forEach((el,i) => {
+    el.classList.toggle('active', (i===0 && view==='asignados') || (i===1 && view==='historial'));
+  });
+  renderTecnico(view);
+}
+
+function renderTecnico(view) {
+  const content = document.getElementById('main-content');
+  let html = '';
+  const mis = tickets.filter(t => todayAssigned.includes(t.id));
+
+  if (view === 'asignados') {
+    html += `<div class="stats-bar">
+      <div class="stat-card progress"><div class="stat-num">${mis.filter(t=>t.estado==='En curso').length}</div><div class="stat-label">EN CURSO</div></div>
+      <div class="stat-card done"><div class="stat-num">${mis.filter(t=>t.estado==='Resuelto').length}</div><div class="stat-label">RESUELTOS</div></div>
+      <div class="stat-card"><div class="stat-num">${mis.filter(t=>t.estado==='Pendiente').length}</div><div class="stat-label">PENDIENTES</div></div>
+    </div>`;
+    html += `<div class="cards-list">`;
+    if (mis.length === 0) {
+      html += `<div class="empty"><div class="empty-icon">🔧</div><div class="empty-text">No tenés trabajos asignados para hoy.</div></div>`;
+    } else {
+      mis.forEach(t => { html += ticketCard(t, false); });
+    }
+    html += `</div>`;
+  }
+
+  if (view === 'historial') {
+    html += `<div class="cards-list">`;
+    tickets.filter(t=>t.estado==='Resuelto').forEach(t => { html += ticketCard(t, false); });
+    html += `</div>`;
+  }
+
+  content.innerHTML = html;
+}
+
+// ─── TICKET CARD ──────────────────────────────────
+function ticketCard(t, showAssign) {
+  const estadoClass = t.estado === 'En curso' ? 'en-curso' : t.estado === 'Resuelto' ? 'resuelto' : 'pendiente';
+  const prioCls = t.prioridad === 'Pto. Crítico' ? 'critico' : 'otros';
+  const prioLabel = t.prioridad === 'Pto. Crítico' ? '🔴 Crítico' : '⚪ Otros';
+  const isHoy = todayAssigned.includes(t.id);
+
+  return `<div class="ticket-card ${prioCls === 'critico' ? 'critico' : ''} ${estadoClass}" onclick="openTicket('${t.id}')">
+    <div class="card-top">
+      <div class="card-id">${t.id}</div>
+      <div class="badges">
+        ${isHoy ? '<span class="badge hoy">HOY</span>' : ''}
+        <span class="badge ${prioCls}">${prioLabel}</span>
+        <span class="badge ${estadoClass}">${t.estado}</span>
+      </div>
+    </div>
+    <div class="card-desc">${t.desc}</div>
+    ${t.notas && t.notas.length > 0 ? `<div class="card-notas">
+      <div class="card-notas-label">🔧 Téc.</div>
+      <div class="card-notas-text">${t.notas[0].texto}</div>
+    </div>` : ''}
+    <div class="card-meta">
+      <div class="card-who">👤 ${t.solicitante}</div>
+      <div class="card-date">📅 ${t.fechaFin || '—'}</div>
+    </div>
+    ${showAssign && !isHoy ? `<button class="assign-btn" onclick="toggleHoy(event,'${t.id}')">+ Asignar a hoy</button>` : ''}
+    ${showAssign && isHoy ? `<button class="assign-btn assigned" onclick="toggleHoy(event,'${t.id}')">✓ Asignado a hoy</button>` : ''}
+  </div>`;
+}
+
+function toggleHoy(e, id) {
+  e.stopPropagation();
+  const idx = todayAssigned.indexOf(id);
+  if (idx === -1) {
+    todayAssigned.push(id);
+    tickets.find(t=>t.id===id).asignadoHoy = true;
+    showToast('Asignado a hoy ✓', 'success');
+  } else {
+    todayAssigned.splice(idx, 1);
+    tickets.find(t=>t.id===id).asignadoHoy = false;
+    showToast('Removido del día', '');
+  }
+  renderContent();
+}
+
+// ─── MODAL DETALLE ────────────────────────────────
+function openTicket(id) {
+  selectedTicket = tickets.find(t => t.id === id);
+  const t = selectedTicket;
+  const estadoClass = t.estado === 'En curso' ? 'en-curso' : t.estado === 'Resuelto' ? 'resuelto' : 'pendiente';
+
+  document.getElementById('modal-content').innerHTML = `
+    <div class="modal-title">${t.tipo}</div>
+    <div class="modal-id">${t.id} · ${t.solicitante}</div>
+    <div class="modal-section">
+      <div class="modal-label">Descripción</div>
+      <div class="modal-value">${t.desc}</div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-badges">
+        <span class="badge ${t.prioridad==='Pto. Crítico'?'critico':'otros'}">${t.prioridad}</span>
+        ${t.activo ? `<span class="badge tipo">${t.activo}</span>` : ''}
+        <span class="badge ${estadoClass}">${t.estado}</span>
+      </div>
+    </div>
+    <div class="avance-section">
+      <div class="avance-label">Avance</div>
+      <div class="avance-bar-bg"><div class="avance-bar-fill" style="width:${t.avance}%"></div></div>
+      <div class="avance-val">${t.avance}%</div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-label">Cambiar estado</div>
+      <div class="estado-selector">
+        <button class="estado-opt ${t.estado==='Pendiente'?'active-pendiente':''}" onclick="setEstado('Pendiente')">Pendiente</button>
+        <button class="estado-opt ${t.estado==='En curso'?'active-en-curso':''}" onclick="setEstado('En curso')">En curso</button>
+        <button class="estado-opt ${t.estado==='Resuelto'?'active-resuelto':''}" onclick="setEstado('Resuelto')">Resuelto ✓</button>
+      </div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-label">Historial de avances</div>
+      ${(t.notas && t.notas.length > 0) ? `
+        <div class="historial">
+          ${t.notas.map(n => `
+            <div class="historial-entry">
+              <div class="historial-meta">
+                <span class="historial-autor">🔧 ${n.autor}</span>
+                <span class="historial-fecha">${n.fecha}</span>
+              </div>
+              <div class="historial-texto">${n.texto}</div>
+            </div>
+          `).join('')}
+        </div>
+      ` : `<div style="font-size:12px;color:var(--muted);padding:8px 0">Sin actualizaciones aún.</div>`}
+      <textarea class="notas-textarea" id="notas-input" placeholder="Escribí una nueva actualización..." style="margin-top:12px"></textarea>
+      <button class="notas-add-btn" onclick="agregarNota()">+ Agregar actualización</button>
+    </div>
+    <div class="modal-section">
+      <div class="modal-label">Solicitante</div>
+      <div class="modal-value">${t.solicitante} · <span style="color:var(--muted);font-size:12px;font-family:var(--font-mono)">${t.email}</span></div>
+    </div>
+    <button class="modal-save-btn" id="save-btn" onclick="saveTicket()">Guardar cambios</button>
+  `;
+
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function setEstado(estado) {
+  if (!selectedTicket) return;
+  selectedTicket.estado = estado;
+  // re-render estado buttons
+  document.querySelectorAll('.estado-opt').forEach(btn => {
+    btn.className = 'estado-opt';
+    if (btn.textContent.trim().startsWith(estado.split(' ')[0])) {
+      if (estado === 'Pendiente') btn.classList.add('active-pendiente');
+      if (estado === 'En curso') btn.classList.add('active-en-curso');
+      if (estado === 'Resuelto') btn.classList.add('active-resuelto');
+    }
+  });
+}
+
+function agregarNota() {
+  if (!selectedTicket) return;
+  const input = document.getElementById('notas-input');
+  const texto = input.value.trim();
+  if (!texto) { showToast('Escribí algo antes de agregar', ''); return; }
+
+  const now = new Date();
+  const fecha = now.toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric'})
+    + ' ' + now.toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit'});
+  const autor = currentRole === 'gerente' ? 'Gerente' : 'Técnico';
+
+  const nuevaNota = { autor, fecha, texto };
+  selectedTicket.notas.unshift(nuevaNota); // más reciente primero
+
+  const idx = tickets.findIndex(t => t.id === selectedTicket.id);
+  if (idx !== -1) tickets[idx] = { ...selectedTicket, notas: [...selectedTicket.notas] };
+
+  input.value = '';
+  // re-render solo el historial sin cerrar el modal
+  const historialEl = document.querySelector('.historial');
+  const sinActEl = document.querySelector('.modal-section .modal-label + div');
+  const notasSection = document.querySelector('.modal-section:has(#notas-input)');
+  // re-render historial section in place
+  const labelEl = notasSection.querySelector('.modal-label');
+  labelEl.insertAdjacentHTML('afterend', `
+    <div class="historial">
+      ${selectedTicket.notas.map(n => `
+        <div class="historial-entry">
+          <div class="historial-meta">
+            <span class="historial-autor">🔧 ${n.autor}</span>
+            <span class="historial-fecha">${n.fecha}</span>
+          </div>
+          <div class="historial-texto">${n.texto}</div>
+        </div>
+      `).join('')}
+    </div>
+  `);
+  // remove old historial or "sin actualizaciones" if present
+  const oldHistorial = notasSection.querySelectorAll('.historial');
+  if (oldHistorial.length > 1) oldHistorial[oldHistorial.length - 1].remove();
+  const sinAct = notasSection.querySelector('div[style*="Sin actualizaciones"]');
+  if (sinAct) sinAct.remove();
+
+  showToast('Actualización agregada ✓', 'success');
+  renderContent();
+}
+
+function saveTicket() {
+  if (!selectedTicket) return;
+  const idx = tickets.findIndex(t => t.id === selectedTicket.id);
+  if (idx !== -1) tickets[idx] = { ...selectedTicket };
+
+  const btn = document.getElementById('save-btn');
+  btn.textContent = 'Guardando...'; btn.disabled = true; btn.classList.add('saving');
+
+  if (scriptUrl) {
+    syncToSheet(selectedTicket).then(() => {
+      btn.textContent = 'Guardado ✓';
+      showToast('Sincronizado con Sheet ✓', 'success');
+    }).catch(() => {
+      showToast('Guardado localmente (sin Sheet)', '');
+    }).finally(() => {
+      setTimeout(() => { closeModal(); renderContent(); }, 600);
+    });
+  } else {
+    setTimeout(() => {
+      closeModal();
+      renderContent();
+      showToast('Cambios guardados ✓', 'success');
+    }, 500);
+  }
+}
+
+async function syncToSheet(ticket) {
+  const url = scriptUrl
+    + '?action=update'
+    + '&id='     + encodeURIComponent(ticket.id)
+    + '&estado=' + encodeURIComponent(ticket.estado)
+    + '&notas='  + encodeURIComponent(JSON.stringify(ticket.notas))
+    + '&avance=' + encodeURIComponent(ticket.avance || 0);
+  await fetch(url, { mode: 'no-cors' });
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  selectedTicket = null;
+}
+
+function closeModalOnBg(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+// ─── CONFIG ───────────────────────────────────────
+function openConfig() {
+  document.getElementById('script-url').value = scriptUrl;
+  document.getElementById('sheet-name').value = sheetName;
+  document.getElementById('config-overlay').classList.add('open');
+}
+
+function closeConfig() {
+  document.getElementById('config-overlay').classList.remove('open');
+}
+
+function closeConfigOnBg(e) {
+  if (e.target === document.getElementById('config-overlay')) closeConfig();
+}
+
+function saveConfig() {
+  scriptUrl = document.getElementById('script-url').value.trim();
+  sheetName = document.getElementById('sheet-name').value.trim();
+  localStorage.setItem('mant_script_url', scriptUrl);
+  localStorage.setItem('mant_sheet_name', sheetName);
+  closeConfig();
+  showToast('Configuración guardada ✓', 'success');
+  if (scriptUrl) fetchFromSheet();
+}
+
+async function fetchFromSheet() {
+  showToast('Cargando datos...', '');
+  try {
+    const res  = await fetch(scriptUrl + '?action=get');
+    const data = await res.json();
+    if (data && data.tickets && data.tickets.length > 0) {
+      const hoyPrev = new Set(todayAssigned);
+      tickets = data.tickets.map(t => ({
+        ...t,
+        asignadoHoy: hoyPrev.has(t.id),
+      }));
+      todayAssigned = tickets.filter(t => t.asignadoHoy).map(t => t.id);
+      renderContent();
+      showToast('Sheet sincronizado ✓', 'success');
+    } else {
+      loadDemoData();
+      showToast('Sin datos en Sheet, usando demo', '');
+    }
+  } catch(e) {
+    loadDemoData();
+    showToast('Sin conexión al Sheet, usando demo', 'error');
+  }
+}
+
+// ─── TOAST ────────────────────────────────────────
+function showToast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => { el.classList.remove('show'); }, 2800);
+}
+
+// ─── INIT ─────────────────────────────────────────
+loadDemoData();
+</script>
+</body>
+</html>
