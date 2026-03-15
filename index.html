@@ -607,9 +607,10 @@ function loadDemoData() {
   }
 }
 
-// ─── GERENTE ──────────────────────────────────────
+const esTerminado = (estado) => estado && estado.toString().trim().toLowerCase() === 'terminado';
+
 function renderGerenteTabs() {
-  const pending = tickets.filter(t => t.estado !== 'Terminado').length;
+  const pending = tickets.filter(t => !esTerminado(t.estado)).length;
   const inProgress = tickets.filter(t => t.estado === 'En curso').length;
   const today = todayAssigned.length;
   document.getElementById('tabs-container').innerHTML = `
@@ -636,14 +637,14 @@ function renderGerente() {
   const content = document.getElementById('main-content');
   let html = '';
 
-  const critical = tickets.filter(t => t.prioridad === 'Pto. Crítico' && t.estado !== 'Terminado').length;
-  const inCurso = tickets.filter(t => t.estado === 'En curso').length;
-  const terminados = tickets.filter(t => t.estado === 'Terminado').length;
+  const critical  = tickets.filter(t => t.prioridad === 'Pto. Crítico' && !esTerminado(t.estado)).length;
+  const inCurso   = tickets.filter(t => t.estado === 'En curso').length;
+  const terminados = tickets.filter(t => esTerminado(t.estado)).length;
 
   if (currentTab === 'pendientes') {
     html += statsBar(critical, inCurso, terminados);
     html += filtersBar(['todos','Pto. Crítico','En curso','Pendiente','Vehículos','Edilicia','Máquinas']);
-    const filtered = filterTickets(tickets.filter(t => t.estado !== 'Terminado'));
+    const filtered = filterTickets(tickets.filter(t => !esTerminado(t.estado)));
     html += `<div class="cards-list">`;
     if (filtered.length === 0) {
       html += `<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Todo bajo control</div></div>`;
@@ -682,11 +683,11 @@ function renderGerente() {
   content.innerHTML = html;
 }
 
-function statsBar(critical, inCurso, resueltos) {
+function statsBar(critical, inCurso, countTerminados) {
   return `<div class="stats-bar">
     <div class="stat-card critical"><div class="stat-num">${critical}</div><div class="stat-label">CRÍTICOS</div></div>
     <div class="stat-card progress"><div class="stat-num">${inCurso}</div><div class="stat-label">EN CURSO</div></div>
-    <div class="stat-card done"><div class="stat-num">${terminados}</div><div class="stat-label">TERMINADOS</div></div>
+    <div class="stat-card done"><div class="stat-num">${countTerminados}</div><div class="stat-label">TERMINADOS</div></div>
   </div>`;
 }
 
@@ -753,7 +754,7 @@ function renderTecnico(view) {
 
   if (view === 'historial') {
     html += `<div class="cards-list">`;
-    tickets.filter(t=>t.estado==='Terminado').forEach(t => { html += ticketCard(t, false); });
+    tickets.filter(t => esTerminado(t.estado)).forEach(t => { html += ticketCard(t, false); });
     html += `</div>`;
   }
 
@@ -762,7 +763,7 @@ function renderTecnico(view) {
 
 // ─── TICKET CARD ──────────────────────────────────
 function ticketCard(t, showAssign) {
-  const estadoClass = t.estado === 'En curso' ? 'en-curso' : t.estado === 'Terminado' ? 'resuelto' : 'pendiente';
+  const estadoClass = t.estado === 'En curso' ? 'en-curso' : esTerminado(t.estado) ? 'resuelto' : 'pendiente';
   const prioCls = t.prioridad === 'Pto. Crítico' ? 'critico' : 'otros';
   const prioLabel = t.prioridad === 'Pto. Crítico' ? '🔴 Crítico' : '⚪ Otros';
   const isHoy = todayAssigned.includes(t.id);
@@ -809,7 +810,7 @@ function toggleHoy(e, id) {
 function openTicket(id) {
   selectedTicket = tickets.find(t => t.id === id);
   const t = selectedTicket;
-  const estadoClass = t.estado === 'En curso' ? 'en-curso' : t.estado === 'Terminado' ? 'resuelto' : 'pendiente';
+  const estadoClass = t.estado === 'En curso' ? 'en-curso' : esTerminado(t.estado) ? 'resuelto' : 'pendiente';
 
   document.getElementById('modal-content').innerHTML = `
     <div class="modal-title">${t.tipo}</div>
