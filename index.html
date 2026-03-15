@@ -519,7 +519,7 @@ let currentTab = 'pendientes';
 let currentFilter = 'todos';
 let tickets = [];
 let todayAssigned = [];
-let scriptUrl = localStorage.getItem('mant_script_url') || 'https://script.google.com/macros/s/AKfycbzCuqIQzCHqsB1kbkwISct3_9tbGCrsyrrh3je9rFl9AfxcXHoGhgOgg308utFcJzXg/exec';
+let scriptUrl = localStorage.getItem('mant_script_url') || 'https://script.google.com/macros/s/AKfycbwI6AVgewRlHEoAZrXQS7KAaE9bdU1eL13DvPyS0mdlQBcARoELRrlcOy3-J67NDljj/exec';
 let sheetName = localStorage.getItem('mant_sheet_name') || 'Respuestas de formulario 1';
 let selectedTicket = null;
 
@@ -1019,13 +1019,19 @@ async function fetchFromSheet() {
       };
       const script = document.createElement('script');
       script.src = url;
-      script.onerror = () => { loadDemoData(); showToast('Sin conexión al Sheet, usando demo', 'error'); resolve(); };
+      script.onerror = () => { loadDemoData(); showToast('Sin conexión al Sheet', 'error'); resolve(); };
       document.head.appendChild(script);
-      setTimeout(() => { loadDemoData(); showToast('Timeout, usando demo', 'error'); resolve(); }, 8000);
+      setTimeout(() => { 
+        if (tickets.length === 0) {
+          loadDemoData(); 
+          showToast('Carga lenta, usando demo. Reintentá en un momento.', 'error'); 
+        }
+        resolve(); 
+      }, 25000);
     });
   } catch(e) {
     loadDemoData();
-    showToast('Sin conexión al Sheet, usando demo', 'error');
+    showToast('Sin conexión al Sheet', 'error');
   }
 }
 
