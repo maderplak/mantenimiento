@@ -519,7 +519,7 @@ let currentTab = 'pendientes';
 let currentFilter = 'todos';
 let tickets = [];
 let todayAssigned = [];
-let scriptUrl = localStorage.getItem('mant_script_url') || 'https://script.google.com/macros/s/AKfycbzPiuCw2VVh1nvSoIOkMhDQzQEpWaH_qDUzBdv7p_iYVLbkUyO-n8lDHbCsMQDjBaaA/exec';
+let scriptUrl = localStorage.getItem('mant_script_url') || 'https://script.google.com/macros/s/AKfycbxdV5f8ULKQsvK8UBdOTqs_rtTzFcF4XyJCUaMeuAc_-H_eX6EoZO_91465-NwhxS3e/exec';
 let sheetName = localStorage.getItem('mant_sheet_name') || 'Respuestas de formulario 1';
 let selectedTicket = null;
 
@@ -609,7 +609,7 @@ function loadDemoData() {
 
 // ─── GERENTE ──────────────────────────────────────
 function renderGerenteTabs() {
-  const pending = tickets.filter(t => t.estado !== 'Resuelto').length;
+  const pending = tickets.filter(t => t.estado !== 'Terminado').length;
   const inProgress = tickets.filter(t => t.estado === 'En curso').length;
   const today = todayAssigned.length;
   document.getElementById('tabs-container').innerHTML = `
@@ -636,14 +636,14 @@ function renderGerente() {
   const content = document.getElementById('main-content');
   let html = '';
 
-  const critical = tickets.filter(t => t.prioridad === 'Pto. Crítico' && t.estado !== 'Resuelto').length;
+  const critical = tickets.filter(t => t.prioridad === 'Pto. Crítico' && t.estado !== 'Terminado').length;
   const inCurso = tickets.filter(t => t.estado === 'En curso').length;
-  const resueltos = tickets.filter(t => t.estado === 'Resuelto').length;
+  const terminados = tickets.filter(t => t.estado === 'Terminado').length;
 
   if (currentTab === 'pendientes') {
-    html += statsBar(critical, inCurso, resueltos);
+    html += statsBar(critical, inCurso, terminados);
     html += filtersBar(['todos','Pto. Crítico','En curso','Pendiente','Vehículos','Edilicia','Máquinas']);
-    const filtered = filterTickets(tickets.filter(t => t.estado !== 'Resuelto'));
+    const filtered = filterTickets(tickets.filter(t => t.estado !== 'Terminado'));
     html += `<div class="cards-list">`;
     if (filtered.length === 0) {
       html += `<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Todo bajo control</div></div>`;
@@ -672,7 +672,7 @@ function renderGerente() {
   }
 
   if (currentTab === 'historial') {
-    html += filtersBar(['todos','Pendiente','En curso','Resuelto']);
+    html += filtersBar(['todos','Pendiente','En curso','Terminado']);
     const filtered = filterTickets(tickets);
     html += `<div class="cards-list">`;
     filtered.forEach(t => { html += ticketCard(t, false); });
@@ -686,7 +686,7 @@ function statsBar(critical, inCurso, resueltos) {
   return `<div class="stats-bar">
     <div class="stat-card critical"><div class="stat-num">${critical}</div><div class="stat-label">CRÍTICOS</div></div>
     <div class="stat-card progress"><div class="stat-num">${inCurso}</div><div class="stat-label">EN CURSO</div></div>
-    <div class="stat-card done"><div class="stat-num">${resueltos}</div><div class="stat-label">RESUELTOS</div></div>
+    <div class="stat-card done"><div class="stat-num">${terminados}</div><div class="stat-label">TERMINADOS</div></div>
   </div>`;
 }
 
@@ -753,7 +753,7 @@ function renderTecnico(view) {
 
   if (view === 'historial') {
     html += `<div class="cards-list">`;
-    tickets.filter(t=>t.estado==='Resuelto').forEach(t => { html += ticketCard(t, false); });
+    tickets.filter(t=>t.estado==='Terminado').forEach(t => { html += ticketCard(t, false); });
     html += `</div>`;
   }
 
@@ -762,7 +762,7 @@ function renderTecnico(view) {
 
 // ─── TICKET CARD ──────────────────────────────────
 function ticketCard(t, showAssign) {
-  const estadoClass = t.estado === 'En curso' ? 'en-curso' : t.estado === 'Resuelto' ? 'resuelto' : 'pendiente';
+  const estadoClass = t.estado === 'En curso' ? 'en-curso' : t.estado === 'Terminado' ? 'resuelto' : 'pendiente';
   const prioCls = t.prioridad === 'Pto. Crítico' ? 'critico' : 'otros';
   const prioLabel = t.prioridad === 'Pto. Crítico' ? '🔴 Crítico' : '⚪ Otros';
   const isHoy = todayAssigned.includes(t.id);
@@ -809,7 +809,7 @@ function toggleHoy(e, id) {
 function openTicket(id) {
   selectedTicket = tickets.find(t => t.id === id);
   const t = selectedTicket;
-  const estadoClass = t.estado === 'En curso' ? 'en-curso' : t.estado === 'Resuelto' ? 'resuelto' : 'pendiente';
+  const estadoClass = t.estado === 'En curso' ? 'en-curso' : t.estado === 'Terminado' ? 'resuelto' : 'pendiente';
 
   document.getElementById('modal-content').innerHTML = `
     <div class="modal-title">${t.tipo}</div>
@@ -835,7 +835,7 @@ function openTicket(id) {
       <div class="estado-selector">
         <button class="estado-opt ${t.estado==='Pendiente'?'active-pendiente':''}" onclick="setEstado('Pendiente')">Pendiente</button>
         <button class="estado-opt ${t.estado==='En curso'?'active-en-curso':''}" onclick="setEstado('En curso')">En curso</button>
-        <button class="estado-opt ${t.estado==='Resuelto'?'active-resuelto':''}" onclick="setEstado('Resuelto')">Resuelto ✓</button>
+        <button class="estado-opt ${t.estado==='Terminado'?'active-resuelto':''}" onclick="setEstado('Terminado')">Terminado ✓</button>
       </div>
     </div>
     <div class="modal-section">
@@ -875,7 +875,7 @@ function setEstado(estado) {
     if (btn.textContent.trim().startsWith(estado.split(' ')[0])) {
       if (estado === 'Pendiente') btn.classList.add('active-pendiente');
       if (estado === 'En curso') btn.classList.add('active-en-curso');
-      if (estado === 'Resuelto') btn.classList.add('active-resuelto');
+    if (estado === 'Terminado') btn.classList.add('active-resuelto');
     }
   });
 }
