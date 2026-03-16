@@ -524,6 +524,7 @@ let todayAssigned = [];
 let scriptUrl = localStorage.getItem('mant_script_url') || 'https://script.google.com/macros/s/AKfycbxdV5f8ULKQsvK8UBdOTqs_rtTzFcF4XyJCUaMeuAc_-H_eX6EoZO_91465-NwhxS3e/exec';
 let sheetName = localStorage.getItem('mant_sheet_name') || 'Respuestas de formulario 1';
 let selectedTicket = null;
+let todayAssigned = [];
 
 // ─── DEMO DATA (estructura real de la planilla) ──
 const DEMO = [
@@ -552,6 +553,7 @@ const DEMO = [
 
 // ─── SPLASH ──────────────────────────────────────
 setTimeout(() => {
+  todayAssigned = loadTodayAssigned();
   document.getElementById('splash').classList.add('hide');
   setTimeout(() => {
     document.getElementById('splash').style.display = 'none';
@@ -793,6 +795,25 @@ function ticketCard(t, showAssign) {
   </div>`;
 }
 
+function saveTodayAssigned() {
+  const today = new Date().toLocaleDateString('es-AR');
+  localStorage.setItem('mant_today_assigned', JSON.stringify(todayAssigned));
+  localStorage.setItem('mant_today_date', today);
+}
+
+function loadTodayAssigned() {
+  const today = new Date().toLocaleDateString('es-AR');
+  const savedDate = localStorage.getItem('mant_today_date');
+  if (savedDate === today) {
+    const saved = localStorage.getItem('mant_today_assigned');
+    return saved ? JSON.parse(saved) : [];
+  }
+  // Si cambió el día, limpiamos la selección automáticamente
+  localStorage.removeItem('mant_today_assigned');
+  localStorage.removeItem('mant_today_date');
+  return [];
+}
+
 function toggleHoy(e, id) {
   e.stopPropagation();
   const idx = todayAssigned.indexOf(id);
@@ -805,6 +826,7 @@ function toggleHoy(e, id) {
     tickets.find(t=>t.id===id).asignadoHoy = false;
     showToast('Removido del día', '');
   }
+  saveTodayAssigned();
   renderContent();
 }
 
