@@ -727,15 +727,19 @@ function loadDemoData() {
 const esTerminado = (estado) => estado && estado.toString().trim().toLowerCase() === 'terminado';
 
 function renderGerenteTabs() {
-  const pending = tickets.filter(t => !esTerminado(t.estado)).length;
+  const pending = tickets.filter(t => !esTerminado(t.estado) && t.estado !== 'Bloqueado').length;
   const inProgress = tickets.filter(t => t.estado === 'En curso').length;
   const today = todayAssigned.length;
+  const bloqueados = tickets.filter(t => t.estado === 'Bloqueado').length;
   document.getElementById('tabs-container').innerHTML = `
     <div class="tab ${currentTab==='pendientes'?'active':''}" onclick="switchTab('pendientes')">
       Pendientes <span class="tab-count">${pending}</span>
     </div>
     <div class="tab ${currentTab==='hoy'?'active':''}" onclick="switchTab('hoy')">
       Hoy <span class="tab-count">${today}</span>
+    </div>
+    <div class="tab ${currentTab==='bloqueados'?'active':''}" onclick="switchTab('bloqueados')">
+      Bloqueados <span class="tab-count">${bloqueados}</span>
     </div>
     <div class="tab ${currentTab==='historial'?'active':''}" onclick="switchTab('historial')">
       Todo
@@ -761,7 +765,7 @@ function renderGerente() {
   if (currentTab === 'pendientes') {
     html += statsBar(critical, inCurso, pendientes);
     html += filtersBar(['todos','Pto. Crítico','En curso','Pendiente','Vehículos','Edilicia','Máquinas']);
-    const filtered = filterTickets(tickets.filter(t => !esTerminado(t.estado)));
+    const filtered = filterTickets(tickets.filter(t => !esTerminado(t.estado) && t.estado !== 'Bloqueado'));
     html += `<div class="cards-list">`;
     if (filtered.length === 0) {
       html += `<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Todo bajo control</div></div>`;
@@ -785,6 +789,17 @@ function renderGerente() {
       html += `<div class="empty"><div class="empty-icon">📅</div><div class="empty-text">No asignaste trabajos para hoy.<br>Andá a Pendientes y marcá los de hoy.</div></div>`;
     } else {
       todayTickets.forEach(t => { html += ticketCard(t, false); });
+    }
+    html += `</div>`;
+  }
+
+  if (currentTab === 'bloqueados') {
+    const bloqueados = tickets.filter(t => t.estado === 'Bloqueado');
+    html += `<div class="cards-list">`;
+    if (bloqueados.length === 0) {
+      html += `<div class="empty"><div class="empty-icon">🟢</div><div class="empty-text">No hay trabajos bloqueados</div></div>`;
+    } else {
+      bloqueados.forEach(t => { html += ticketCard(t, false); });
     }
     html += `</div>`;
   }
