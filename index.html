@@ -521,8 +521,8 @@ let currentTab = 'pendientes';
 let currentFilter = 'todos';
 let tickets = [];
 let todayAssigned = [];
-let scriptUrl = localStorage.getItem('mant_script_url') || 'https://script.google.com/macros/s/AKfycbzkjBPgPl4ZPAqB4rBp6p8pij4oVOoNlfMXaDz5h_7XB_o6e2ya66izRgCncKZHdHBD/exec';
-let sheetName = localStorage.getItem('mant_sheet_name') || 'Respuestas de formulario 1';
+let scriptUrl = 'https://script.google.com/macros/s/AKfycbzkjBPgPl4ZPAqB4rBp6p8pij4oVOoNlfMXaDz5h_7XB_o6e2ya66izRgCncKZHdHBD/exec';
+let sheetName = 'Respuestas de formulario 1';
 let selectedTicket = null;
 
 // ─── DEMO DATA (estructura real de la planilla) ──
@@ -1021,10 +1021,8 @@ function closeConfigOnBg(e) {
 }
 
 function saveConfig() {
-  scriptUrl = document.getElementById('script-url').value.trim();
-  sheetName = document.getElementById('sheet-name').value.trim();
-  localStorage.setItem('mant_script_url', scriptUrl);
-  localStorage.setItem('mant_sheet_name', sheetName);
+  scriptUrl = document.getElementById('script-url').value.trim() || scriptUrl;
+  sheetName = document.getElementById('sheet-name').value.trim() || sheetName;
   closeConfig();
   showToast('Configuración guardada ✓', 'success');
   if (scriptUrl) fetchFromSheet();
