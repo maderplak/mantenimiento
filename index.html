@@ -826,10 +826,14 @@ function toggleHoy(e, id) {
     showToast('Removido del día', '');
   }
   saveTodayAssigned();
-  // Sincronizar con Sheet
+  // Sincronizar con Sheet usando JSONP
   if (scriptUrl) {
-    const url = scriptUrl + '?action=toggleHoy&id=' + encodeURIComponent(id) + '&asignado=' + asignado;
-    fetch(url, { mode: 'no-cors' }).catch(() => {});
+    const callbackName = 'toggleHoyCallback_' + Date.now();
+    const url = scriptUrl + '?action=toggleHoy&id=' + encodeURIComponent(id) + '&asignado=' + asignado + '&callback=' + callbackName;
+    window[callbackName] = function() { delete window[callbackName]; };
+    const script = document.createElement('script');
+    script.src = url;
+    document.head.appendChild(script);
   }
   renderContent();
 }
