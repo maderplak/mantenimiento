@@ -78,6 +78,33 @@
   }
   .login-btn:hover { opacity: 0.88; }
 
+  /* ── PIN ── */
+  .pin-display {
+    display: flex; gap: 12px; justify-content: center; margin: 16px 0;
+  }
+  .pin-dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid var(--border); background: transparent;
+    transition: all 0.15s;
+  }
+  .pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+  .pin-dot.error { background: var(--red); border-color: var(--red); }
+  .pin-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 10px; margin-top: 8px;
+  }
+  .pin-key {
+    padding: 16px; border-radius: var(--radius-sm);
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--font-display);
+    font-size: 18px; font-weight: 700; cursor: pointer;
+    transition: all 0.15s; text-align: center;
+  }
+  .pin-key:hover { background: var(--surface); border-color: var(--accent); }
+  .pin-key:active { transform: scale(0.95); }
+  .pin-key.del { font-size: 14px; color: var(--muted); }
+  .pin-error { color: var(--red); font-size: 12px; font-family: var(--font-mono); text-align: center; min-height: 18px; }
+
   /* ── APP SHELL ── */
   #app { display: none; flex-direction: column; height: 100%; }
   #app.visible { display: flex; }
@@ -425,9 +452,7 @@
 <!-- LOGIN -->
 <div id="login" class="hidden">
   <div class="login-card">
-    <div>
-      <div class="login-title">Hola 👋<br>¿Quién sos<span>?</span></div>
-    </div>
+    <div class="login-title">Hola 👋<br>¿Quién sos<span>?</span></div>
     <div class="login-roles">
       <button class="role-btn active" id="role-gerente" onclick="selectRole('gerente')">
         <span class="icon">🧑‍💼</span>
@@ -438,7 +463,27 @@
         Técnico
       </button>
     </div>
-    <button class="login-btn" onclick="enterApp()">Entrar →</button>
+    <div class="pin-display">
+      <div class="pin-dot" id="dot-0"></div>
+      <div class="pin-dot" id="dot-1"></div>
+      <div class="pin-dot" id="dot-2"></div>
+      <div class="pin-dot" id="dot-3"></div>
+    </div>
+    <div class="pin-error" id="pin-error"></div>
+    <div class="pin-grid">
+      <button class="pin-key" onclick="pinPress('1')">1</button>
+      <button class="pin-key" onclick="pinPress('2')">2</button>
+      <button class="pin-key" onclick="pinPress('3')">3</button>
+      <button class="pin-key" onclick="pinPress('4')">4</button>
+      <button class="pin-key" onclick="pinPress('5')">5</button>
+      <button class="pin-key" onclick="pinPress('6')">6</button>
+      <button class="pin-key" onclick="pinPress('7')">7</button>
+      <button class="pin-key" onclick="pinPress('8')">8</button>
+      <button class="pin-key" onclick="pinPress('9')">9</button>
+      <button class="pin-key" style="visibility:hidden"></button>
+      <button class="pin-key" onclick="pinPress('0')">0</button>
+      <button class="pin-key del" onclick="pinDel()">⌫</button>
+    </div>
   </div>
 </div>
 
@@ -560,14 +605,62 @@ setTimeout(() => {
   }, 400);
 }, 1200);
 
+// ─── PINS ─────────────────────────────────────────
+const PINS = { gerente: '1234', tecnico: '5678' };
+let pinBuffer = '';
+
+function pinPress(digit) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += digit;
+  updatePinDisplay();
+  if (pinBuffer.length === 4) {
+    setTimeout(checkPin, 150);
+  }
+}
+
+function pinDel() {
+  pinBuffer = pinBuffer.slice(0, -1);
+  updatePinDisplay();
+  document.getElementById('pin-error').textContent = '';
+  document.querySelectorAll('.pin-dot').forEach(d => d.classList.remove('error'));
+}
+
+function updatePinDisplay() {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('dot-' + i);
+    dot.classList.toggle('filled', i < pinBuffer.length);
+    dot.classList.remove('error');
+  }
+}
+
+function checkPin() {
+  if (pinBuffer === PINS[currentRole]) {
+    document.getElementById('pin-error').textContent = '';
+    enterApp();
+  } else {
+    document.querySelectorAll('.pin-dot').forEach(d => {
+      d.classList.add('error'); d.classList.remove('filled');
+    });
+    document.getElementById('pin-error').textContent = 'PIN incorrecto';
+    pinBuffer = '';
+    setTimeout(() => {
+      document.querySelectorAll('.pin-dot').forEach(d => d.classList.remove('error'));
+    }, 600);
+  }
+}
+
 // ─── LOGIN ───────────────────────────────────────
 function selectRole(role) {
   currentRole = role;
+  pinBuffer = '';
+  updatePinDisplay();
+  document.getElementById('pin-error').textContent = '';
   document.getElementById('role-gerente').classList.toggle('active', role === 'gerente');
   document.getElementById('role-tecnico').classList.toggle('active', role === 'tecnico');
 }
 
 function enterApp() {
+  pinBuffer = '';
   document.getElementById('login').classList.add('hidden');
   document.getElementById('app').classList.add('visible');
   document.getElementById('role-label').textContent = currentRole;
@@ -579,6 +672,9 @@ function logout() {
   document.getElementById('login').classList.remove('hidden');
   currentTab = 'pendientes';
   currentFilter = 'todos';
+  pinBuffer = '';
+  updatePinDisplay();
+  document.getElementById('pin-error').textContent = '';
 }
 
 // ─── INIT ─────────────────────────────────────────
