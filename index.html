@@ -346,7 +346,7 @@
   .estado-opt:hover { border-color: var(--accent); color: var(--text); }
   .estado-opt.active-pendiente { border-color: var(--muted); background: rgba(122,117,112,0.15); color: var(--text); }
   .estado-opt.active-en-curso { border-color: var(--orange); background: var(--orange-dim); color: var(--orange); }
-  .estado-opt.active-resuelto { border-color: var(--green); background: var(--green-dim); color: var(--green); }
+  .estado-opt.active-bloqueado { border-color: var(--orange); background: var(--orange-dim); color: var(--orange); }
 
   .modal-save-btn {
     width: 100%; padding: 14px; border-radius: var(--radius-sm);
@@ -396,7 +396,24 @@
   .today-val { font-size: 15px; font-weight: 700; color: var(--accent); }
   .today-right { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
 
-  /* ── BOTTOM NAV (técnico) ── */
+  .badge.bloqueado { background: rgba(240,144,80,0.15); color: var(--orange); }
+  .planificar-banner {
+    background: var(--red-dim); border: 1.5px solid var(--red);
+    border-radius: var(--radius); padding: 20px;
+    text-align: center; margin-bottom: 16px;
+  }
+  .planificar-titulo {
+    font-size: 16px; font-weight: 800; color: var(--red);
+    letter-spacing: 0.04em; margin-bottom: 6px;
+  }
+  .planificar-sub { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+  .planificar-btn {
+    display: inline-block; padding: 10px 20px; border-radius: var(--radius-sm);
+    background: var(--red); color: #fff; font-family: var(--font-display);
+    font-weight: 700; font-size: 13px; border: none; cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .planificar-btn:hover { opacity: 0.85; }
   .bottom-nav {
     display: none; /* only shown for tecnico */
     padding: 10px 20px; border-top: 1px solid var(--border);
@@ -689,9 +706,10 @@ function initApp() {
     document.getElementById('bottom-nav').classList.remove('visible');
     renderGerente();
   } else {
+    currentTab = 'tec-hoy';
     renderTecnicoTabs();
-    document.getElementById('bottom-nav').classList.add('visible');
-    renderTecnico('asignados');
+    document.getElementById('bottom-nav').classList.remove('visible');
+    renderTecnico('tec-hoy');
   }
 }
 
@@ -818,16 +836,30 @@ function renderContent() {
 
 // ─── TÉCNICO ──────────────────────────────────────
 function renderTecnicoTabs() {
+  const hoy = tickets.filter(t => todayAssigned.includes(t.id)).length;
+  const pendientes = tickets.filter(t => t.estado === 'Pendiente' && !esTerminado(t.estado)).length;
+  const enCurso = tickets.filter(t => t.estado === 'En curso').length;
+  const bloqueados = tickets.filter(t => t.estado === 'Bloqueado').length;
+  const tab = currentTab || 'tec-hoy';
   document.getElementById('tabs-container').innerHTML = `
-    <div class="tab active" id="tab-mis">Mis trabajos</div>
+    <div class="tab ${tab==='tec-hoy'?'active':''}" onclick="tecnicoView('tec-hoy')">
+      Hoy <span class="tab-count">${hoy}</span>
+    </div>
+    <div class="tab ${tab==='tec-curso'?'active':''}" onclick="tecnicoView('tec-curso')">
+      En curso <span class="tab-count">${enCurso}</span>
+    </div>
+    <div class="tab ${tab==='tec-pendientes'?'active':''}" onclick="tecnicoView('tec-pendientes')">
+      Pendientes <span class="tab-count">${pendientes}</span>
+    </div>
+    <div class="tab ${tab==='tec-bloqueado'?'active':''}" onclick="tecnicoView('tec-bloqueado')">
+      Bloqueados <span class="tab-count">${bloqueados}</span>
+    </div>
   `;
 }
 
 function tecnicoView(view) {
   currentTab = view;
-  document.querySelectorAll('.nav-item').forEach((el,i) => {
-    el.classList.toggle('active', (i===0 && view==='asignados') || (i===1 && view==='historial'));
-  });
+  renderTecnicoTabs();
   renderTecnico(view);
 }
 
@@ -836,24 +868,57 @@ function renderTecnico(view) {
   let html = '';
   const mis = tickets.filter(t => todayAssigned.includes(t.id));
 
-  if (view === 'asignados') {
-    html += `<div class="stats-bar">
-      <div class="stat-card progress"><div class="stat-num">${mis.filter(t=>t.estado==='En curso').length}</div><div class="stat-label">EN CURSO</div></div>
-      <div class="stat-card done"><div class="stat-num">${mis.filter(t=>t.estado==='Resuelto').length}</div><div class="stat-label">RESUELTOS</div></div>
-      <div class="stat-card"><div class="stat-num">${mis.filter(t=>t.estado==='Pendiente').length}</div><div class="stat-label">PENDIENTES</div></div>
-    </div>`;
-    html += `<div class="cards-list">`;
+  if (view === 'tec-hoy') {
     if (mis.length === 0) {
-      html += `<div class="empty"><div class="empty-icon">🔧</div><div class="empty-text">No tenés trabajos asignados para hoy.</div></div>`;
+      html += `<div class="planificar-banner">
+        <div class="planificar-titulo">⚠️ NO HAY TAREAS PARA HOY</div>
+        <div class="planificar-sub">No hay trabajos asignados para el día de hoy.<br>Planificá tu jornada desde las pestañas de abajo.</div>
+        <button class="planificar-btn" onclick="tecnicoView('tec-curso')">Ver en curso →</button>
+      </div>`;
     } else {
-      mis.forEach(t => { html += ticketCard(t, false); });
+      html += `<div class="today-banner">
+        <div class="today-left">
+          <div class="today-label">MI DÍA</div>
+          <div class="today-val">${mis.length} trabajo${mis.length !== 1 ? 's' : ''}</div>
+        </div>
+        <div class="today-right">${new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'short'})}</div>
+      </div>`;
+      html += `<div class="cards-list">`;
+      mis.forEach(t => { html += ticketCard(t, true); });
+      html += `</div>`;
+    }
+  }
+
+  if (view === 'tec-curso') {
+    const enCurso = tickets.filter(t => t.estado === 'En curso');
+    html += `<div class="cards-list">`;
+    if (enCurso.length === 0) {
+      html += `<div class="empty"><div class="empty-icon">🔧</div><div class="empty-text">No hay trabajos en curso</div></div>`;
+    } else {
+      enCurso.forEach(t => { html += ticketCard(t, true); });
     }
     html += `</div>`;
   }
 
-  if (view === 'historial') {
+  if (view === 'tec-pendientes') {
+    const pendientes = tickets.filter(t => t.estado === 'Pendiente' && !esTerminado(t.estado));
     html += `<div class="cards-list">`;
-    tickets.filter(t => esTerminado(t.estado)).forEach(t => { html += ticketCard(t, false); });
+    if (pendientes.length === 0) {
+      html += `<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">No hay pendientes</div></div>`;
+    } else {
+      pendientes.forEach(t => { html += ticketCard(t, true); });
+    }
+    html += `</div>`;
+  }
+
+  if (view === 'tec-bloqueado') {
+    const bloqueados = tickets.filter(t => t.estado === 'Bloqueado');
+    html += `<div class="cards-list">`;
+    if (bloqueados.length === 0) {
+      html += `<div class="empty"><div class="empty-icon">🟢</div><div class="empty-text">No hay trabajos bloqueados</div></div>`;
+    } else {
+      bloqueados.forEach(t => { html += ticketCard(t, true); });
+    }
     html += `</div>`;
   }
 
@@ -862,7 +927,7 @@ function renderTecnico(view) {
 
 // ─── TICKET CARD ──────────────────────────────────
 function ticketCard(t, showAssign) {
-  const estadoClass = t.estado === 'En curso' ? 'en-curso' : esTerminado(t.estado) ? 'resuelto' : 'pendiente';
+  const estadoClass = t.estado === 'En curso' ? 'en-curso' : t.estado === 'Bloqueado' ? 'bloqueado' : esTerminado(t.estado) ? 'resuelto' : 'pendiente';
   const prioCls = t.prioridad === 'Pto. Crítico' ? 'critico' : 'otros';
   const prioLabel = t.prioridad === 'Pto. Crítico' ? '🔴 Crítico' : '⚪ Otros';
   const isHoy = todayAssigned.includes(t.id);
@@ -880,6 +945,10 @@ function ticketCard(t, showAssign) {
     ${t.notas && t.notas.length > 0 ? `<div class="card-notas">
       <div class="card-notas-label">🔧 Téc.</div>
       <div class="card-notas-text">${t.notas[0].texto}</div>
+    </div>` : ''}
+    ${t.motivoBloqueo ? `<div class="card-notas" style="border-left-color:var(--orange)">
+      <div class="card-notas-label" style="color:var(--orange)">⚠️ Bloq.</div>
+      <div class="card-notas-text">${t.motivoBloqueo}</div>
     </div>` : ''}
     <div class="card-meta">
       <div class="card-who">👤 ${t.solicitante}</div>
@@ -938,7 +1007,7 @@ function toggleHoy(e, id) {
 function openTicket(id) {
   selectedTicket = tickets.find(t => t.id === id);
   const t = selectedTicket;
-  const estadoClass = t.estado === 'En curso' ? 'en-curso' : esTerminado(t.estado) ? 'resuelto' : 'pendiente';
+  const estadoClass = t.estado === 'En curso' ? 'en-curso' : t.estado === 'Bloqueado' ? 'bloqueado' : esTerminado(t.estado) ? 'resuelto' : 'pendiente';
 
   document.getElementById('modal-content').innerHTML = `
     <div class="modal-title">${t.tipo}</div>
@@ -964,7 +1033,11 @@ function openTicket(id) {
       <div class="estado-selector">
         <button class="estado-opt ${t.estado==='Pendiente'?'active-pendiente':''}" onclick="setEstado('Pendiente')">Pendiente</button>
         <button class="estado-opt ${t.estado==='En curso'?'active-en-curso':''}" onclick="setEstado('En curso')">En curso</button>
+        <button class="estado-opt ${t.estado==='Bloqueado'?'active-bloqueado':''}" onclick="setEstado('Bloqueado')">Bloqueado ⚠️</button>
         <button class="estado-opt ${t.estado==='Terminado'?'active-resuelto':''}" onclick="setEstado('Terminado')">Terminado ✓</button>
+      </div>
+      <div id="motivo-bloqueo-section" style="display:${t.estado==='Bloqueado'?'block':'none'}; margin-top: 8px;">
+        <textarea class="notas-textarea" id="motivo-bloqueo" placeholder="Motivo del bloqueo (ej: esperando repuesto, coordinando proveedor...)" style="min-height:60px">${t.motivoBloqueo||''}</textarea>
       </div>
     </div>
     <div class="modal-section">
@@ -998,15 +1071,16 @@ function openTicket(id) {
 function setEstado(estado) {
   if (!selectedTicket) return;
   selectedTicket.estado = estado;
-  // re-render estado buttons
   document.querySelectorAll('.estado-opt').forEach(btn => {
     btn.className = 'estado-opt';
-    if (btn.textContent.trim().startsWith(estado.split(' ')[0])) {
-      if (estado === 'Pendiente') btn.classList.add('active-pendiente');
-      if (estado === 'En curso') btn.classList.add('active-en-curso');
-    if (estado === 'Terminado') btn.classList.add('active-resuelto');
-    }
+    const txt = btn.textContent.trim();
+    if (estado === 'Pendiente' && txt.startsWith('Pendiente')) btn.classList.add('active-pendiente');
+    if (estado === 'En curso' && txt.startsWith('En curso')) btn.classList.add('active-en-curso');
+    if (estado === 'Bloqueado' && txt.startsWith('Bloqueado')) btn.classList.add('active-bloqueado');
+    if (estado === 'Terminado' && txt.startsWith('Terminado')) btn.classList.add('active-resuelto');
   });
+  const motivoSection = document.getElementById('motivo-bloqueo-section');
+  if (motivoSection) motivoSection.style.display = estado === 'Bloqueado' ? 'block' : 'none';
 }
 
 function agregarNota() {
@@ -1058,6 +1132,19 @@ function agregarNota() {
 
 function saveTicket() {
   if (!selectedTicket) return;
+
+  // Guardar motivo de bloqueo si aplica
+  if (selectedTicket.estado === 'Bloqueado') {
+    const motivo = document.getElementById('motivo-bloqueo');
+    if (motivo && !motivo.value.trim()) {
+      showToast('Escribí el motivo del bloqueo', 'error');
+      return;
+    }
+    if (motivo) selectedTicket.motivoBloqueo = motivo.value.trim();
+  } else {
+    selectedTicket.motivoBloqueo = '';
+  }
+
   const idx = tickets.findIndex(t => t.id === selectedTicket.id);
   if (idx !== -1) tickets[idx] = { ...selectedTicket };
 
