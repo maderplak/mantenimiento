@@ -272,6 +272,30 @@
   .assign-btn:hover { background: var(--accent); color: #0f0f0f; }
   .assign-btn.assigned { background: var(--green-dim); border-color: var(--green); color: var(--green); }
 
+  .tiempo-btn {
+    width: 100%; margin-top: 8px; padding: 11px;
+    border-radius: var(--radius-sm); border: none;
+    font-family: var(--font-display); font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all 0.15s; letter-spacing: 0.03em;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .tiempo-btn.iniciar { background: var(--green); color: #fff; }
+  .tiempo-btn.iniciar:hover { opacity: 0.88; }
+  .tiempo-btn.pausar { background: var(--orange); color: #fff; }
+  .tiempo-btn.pausar:hover { opacity: 0.88; }
+  .tiempo-total {
+    font-family: var(--font-mono); font-size: 11px; color: var(--accent);
+    text-align: center; margin-top: 4px; letter-spacing: 0.06em;
+  }
+  .sesiones { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+  .sesion-entry {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface2); border-radius: var(--radius-sm);
+    padding: 8px 12px;
+  }
+  .sesion-fecha { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+  .sesion-dur { font-family: var(--font-mono); font-size: 11px; color: var(--accent); font-weight: 500; }
+
   /* ── EMPTY STATE ── */
   .empty {
     display: flex; flex-direction: column; align-items: center;
@@ -946,6 +970,8 @@ function ticketCard(t, showAssign) {
   const prioCls = t.prioridad === 'Pto. Crítico' ? 'critico' : 'otros';
   const prioLabel = t.prioridad === 'Pto. Crítico' ? '🔴 Crítico' : '⚪ Otros';
   const isHoy = todayAssigned.includes(t.id);
+  const enSesion = sesionActiva && sesionActiva.id === t.id;
+  const tiempoTotal = calcularTiempoTotal(t);
 
   return `<div class="ticket-card ${prioCls === 'critico' ? 'critico' : ''} ${estadoClass}" onclick="openTicket('${t.id}')">
     <div class="card-top">
@@ -967,11 +993,94 @@ function ticketCard(t, showAssign) {
     </div>` : ''}
     <div class="card-meta">
       <div class="card-who">👤 ${t.solicitante}</div>
-      <div class="card-date">📅 ${t.fechaFin || '—'}</div>
+      <div class="card-date">${tiempoTotal ? '⏱ ' + tiempoTotal : '📅 ' + (t.fechaFin || '—')}</div>
     </div>
+    ${!esTerminado(t.estado) ? `
+      <button class="tiempo-btn ${enSesion ? 'pausar' : 'iniciar'}" onclick="toggleSesion(event,'${t.id}')">
+        ${enSesion ? '⏸ Pausar sesión' : '▶ Iniciar sesión'}
+      </button>` : ''}
     ${showAssign && !isHoy ? `<button class="assign-btn" onclick="toggleHoy(event,'${t.id}')">+ Asignar a hoy</button>` : ''}
     ${showAssign && isHoy ? `<button class="assign-btn assigned" onclick="toggleHoy(event,'${t.id}')">✓ Asignado a hoy</button>` : ''}
   </div>`;
+}
+
+// ─── SESIONES DE TIEMPO ───────────────────────────
+let sesionActiva = null; // { id, inicio }
+
+function toggleSesion(e, id) {
+  e.stopPropagation();
+  if (sesionActiva && sesionActiva.id === id) {
+    // Pausar sesión activa
+    const fin = new Date();
+    const durMs = fin - sesionActiva.inicio;
+    const durMin = Math.round(durMs / 60000);
+    const ticket = tickets.find(t => t.id === id);
+    if (ticket) {
+      if (!ticket.sesiones) ticket.sesiones = [];
+      ticket.sesiones.push({
+        inicio: sesionActiva.inicio.toLocaleString('es-AR'),
+        fin: fin.toLocaleString('es-AR'),
+        duracion: durMin
+      });
+      const idx = tickets.findIndex(t => t.id === id);
+      if (idx !== -1) tickets[idx] = { ...ticket };
+    }
+    sesionActiva = null;
+    showToast('Sesión guardada: ' + durMin + ' min ✓', 'success');
+  } else {
+    // Iniciar nueva sesión
+    if (sesionActiva) {
+      // Pausar la sesión anterior primero
+      toggleSesion(e, sesionActiva.id);
+    }
+    sesionActiva = { id, inicio: new Date() };
+    // Cambiar estado a En curso automáticamente para cualquier estado
+    const ticket = tickets.find(t => t.id === id);
+    if (ticket && ticket.estado !== 'En curso' && !esTerminado(ticket.estado)) {
+      ticket.estado = 'En curso';
+      const idx = tickets.findIndex(t => t.id === id);
+      if (idx !== -1) tickets[idx] = { ...ticket };
+    }
+    showToast('Sesión iniciada ▶', 'success');
+  }
+  renderContent();
+}
+
+function calcularTiempoTotal(t) {
+  if (!t.sesiones || t.sesiones.length === 0) return null;
+  const total = t.sesiones.reduce((acc, s) => acc + (s.duracion || 0), 0);
+  if (total < 60) return total + ' min';
+  const hs = Math.floor(total / 60);
+  const min = total % 60;
+  return hs + 'h ' + (min > 0 ? min + 'min' : '');
+}
+
+function renderSesiones(t) {
+  if (!t.sesiones || t.sesiones.length === 0) return '<div style="font-size:12px;color:var(--muted);padding:4px 0">Sin sesiones registradas.</div>';
+  return `<div class="sesiones">${t.sesiones.map(s => `
+    <div class="sesion-entry">
+      <div class="sesion-fecha">${s.inicio} → ${s.fin}</div>
+      <div class="sesion-dur">${s.duracion} min</div>
+    </div>`).join('')}</div>`;
+}
+
+function toggleSesionModal(id) {
+  const e = { stopPropagation: () => {} };
+  toggleSesion(e, id);
+  const btn = document.querySelector('.tiempo-btn');
+  if (btn) {
+    const enSesion = sesionActiva && sesionActiva.id === id;
+    btn.className = 'tiempo-btn ' + (enSesion ? 'pausar' : 'iniciar');
+    btn.innerHTML = enSesion ? '⏸ Pausar sesión' : '▶ Iniciar sesión';
+  }
+  const t = tickets.find(t => t.id === id);
+  const totalEl = document.querySelector('.tiempo-total');
+  if (t && totalEl) totalEl.textContent = '⏱ Total: ' + (calcularTiempoTotal(t) || '0 min');
+  if (btn && t) {
+    const old = btn.parentElement.querySelector('.sesiones, div[style*="Sin sesiones"]');
+    if (old) old.remove();
+    btn.insertAdjacentHTML('afterend', renderSesiones(t));
+  }
 }
 
 function saveTodayAssigned() {
@@ -1056,6 +1165,15 @@ function openTicket(id) {
       </div>
     </div>
     <div class="modal-section">
+      <div class="modal-label">Tiempo dedicado</div>
+      ${calcularTiempoTotal(t) ? `<div class="tiempo-total">⏱ Total: ${calcularTiempoTotal(t)}</div>` : ''}
+      <button class="tiempo-btn ${sesionActiva && sesionActiva.id === t.id ? 'pausar' : 'iniciar'}" 
+        onclick="toggleSesionModal('${t.id}')" style="margin-top:8px">
+        ${sesionActiva && sesionActiva.id === t.id ? '⏸ Pausar sesión' : '▶ Iniciar sesión'}
+      </button>
+      ${renderSesiones(t)}
+    </div>
+    <div class="modal-section">
       <div class="modal-label">Historial de avances</div>
       ${(t.notas && t.notas.length > 0) ? `
         <div class="historial">
@@ -1086,6 +1204,14 @@ function openTicket(id) {
 function setEstado(estado) {
   if (!selectedTicket) return;
   selectedTicket.estado = estado;
+
+  // Si marca Terminado y hay sesión activa, pausarla automáticamente
+  if (estado === 'Terminado' && sesionActiva && sesionActiva.id === selectedTicket.id) {
+    const e = { stopPropagation: () => {} };
+    toggleSesion(e, selectedTicket.id);
+    showToast('Sesión pausada automáticamente ✓', 'success');
+  }
+
   document.querySelectorAll('.estado-opt').forEach(btn => {
     btn.className = 'estado-opt';
     const txt = btn.textContent.trim();
