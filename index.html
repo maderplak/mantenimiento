@@ -1010,10 +1010,8 @@ let sesionActiva = null; // { id, inicio }
 function toggleSesion(e, id) {
   e.stopPropagation();
   if (sesionActiva && sesionActiva.id === id) {
-    // Pausar sesión activa
     const fin = new Date();
-    const durMs = fin - sesionActiva.inicio;
-    const durMin = Math.round(durMs / 60000);
+    const durMin = Math.round((fin - sesionActiva.inicio) / 60000);
     const ticket = tickets.find(t => t.id === id);
     if (ticket) {
       if (!ticket.sesiones) ticket.sesiones = [];
@@ -1028,13 +1026,23 @@ function toggleSesion(e, id) {
     sesionActiva = null;
     showToast('Sesión guardada: ' + durMin + ' min ✓', 'success');
   } else {
-    // Iniciar nueva sesión
+    // Si hay sesión activa de otro ticket, guardarla sin renderizar
     if (sesionActiva) {
-      // Pausar la sesión anterior primero
-      toggleSesion(e, sesionActiva.id);
+      const fin = new Date();
+      const durMin = Math.round((fin - sesionActiva.inicio) / 60000);
+      const prevTicket = tickets.find(t => t.id === sesionActiva.id);
+      if (prevTicket) {
+        if (!prevTicket.sesiones) prevTicket.sesiones = [];
+        prevTicket.sesiones.push({
+          inicio: sesionActiva.inicio.toLocaleString('es-AR'),
+          fin: fin.toLocaleString('es-AR'),
+          duracion: durMin
+        });
+        const idx = tickets.findIndex(t => t.id === sesionActiva.id);
+        if (idx !== -1) tickets[idx] = { ...prevTicket };
+      }
     }
     sesionActiva = { id, inicio: new Date() };
-    // Cambiar estado a En curso automáticamente para cualquier estado
     const ticket = tickets.find(t => t.id === id);
     if (ticket && ticket.estado !== 'En curso' && !esTerminado(ticket.estado)) {
       ticket.estado = 'En curso';
