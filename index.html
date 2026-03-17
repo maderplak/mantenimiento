@@ -272,6 +272,18 @@
   .assign-btn:hover { background: var(--accent); color: #0f0f0f; }
   .assign-btn.assigned { background: var(--green-dim); border-color: var(--green); color: var(--green); }
 
+  .check-trabajado {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 10px; padding: 10px 12px;
+    background: var(--surface2); border-radius: var(--radius-sm);
+    border: 1px solid var(--border); cursor: pointer;
+  }
+  .check-trabajado input[type="checkbox"] {
+    width: 18px; height: 18px; cursor: pointer; accent-color: var(--green);
+  }
+  .check-label { font-size: 13px; color: var(--muted); font-family: var(--font-display); }
+  .check-label.done { color: var(--green); font-weight: 600; }
+
   .tiempo-btn {
     width: 100%; margin-top: 8px; padding: 11px;
     border-radius: var(--radius-sm); border: none;
@@ -597,6 +609,20 @@
   </div>
 </div>
 
+<!-- MODAL AVANCE DIARIO -->
+<div class="modal-overlay" id="avance-overlay" onclick="cerrarAvanceOnBg(event)">
+  <div class="modal" id="avance-body">
+    <div class="modal-handle"></div>
+    <div class="modal-title">¿Qué avances hiciste?</div>
+    <div style="font-family:var(--font-mono);font-size:11px;color:var(--accent);margin-bottom:4px" id="avance-ticket-id"></div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.4" id="avance-ticket-desc"></div>
+    <textarea class="notas-textarea" id="avance-texto" placeholder="Describí qué hiciste hoy en este trabajo..." style="min-height:100px"></textarea>
+    <div style="font-size:12px;color:var(--red);min-height:18px;margin-top:4px" id="avance-error"></div>
+    <button class="modal-save-btn" onclick="confirmarAvance()" style="margin-top:12px">Confirmar avance</button>
+    <button class="modal-save-btn" onclick="cerrarModalAvance()" style="background:var(--surface2);color:var(--muted);margin-top:8px">Cancelar</button>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -607,8 +633,9 @@ let currentTab = 'pendientes';
 let currentFilter = 'todos';
 let tickets = [];
 let todayAssigned = [];
+let trabajadoHoy = [];
 let sesionActiva = null;
-let scriptUrl = 'https://script.google.com/macros/s/AKfycbzkjBPgPl4ZPAqB4rBp6p8pij4oVOoNlfMXaDz5h_7XB_o6e2ya66izRgCncKZHdHBD/exec';
+let scriptUrl = 'https://script.google.com/macros/s/AKfycbyLJNjMxImY6iTESm271IPATqsVmdwPaGUR63tHChxdlQm-dHN9XwyTR-DAMphuvXHF/exec';
 let sheetName = 'Respuestas de formulario 1';
 let selectedTicket = null;
 
@@ -971,8 +998,7 @@ function ticketCard(t, showAssign) {
   const prioCls = t.prioridad === 'Pto. Crítico' ? 'critico' : 'otros';
   const prioLabel = t.prioridad === 'Pto. Crítico' ? '🔴 Crítico' : '⚪ Otros';
   const isHoy = todayAssigned.includes(t.id);
-  const enSesion = sesionActiva && sesionActiva.id === t.id;
-  const tiempoTotal = calcularTiempoTotal(t);
+  const trabajado = trabajadoHoy.includes(t.id);
 
   return `<div class="ticket-card ${prioCls === 'critico' ? 'critico' : ''} ${estadoClass}" onclick="openTicket('${t.id}')">
     <div class="card-top">
@@ -994,12 +1020,12 @@ function ticketCard(t, showAssign) {
     </div>` : ''}
     <div class="card-meta">
       <div class="card-who">👤 ${t.solicitante}</div>
-      <div class="card-date">${tiempoTotal ? '⏱ ' + tiempoTotal : '📅 ' + (t.fechaFin || '—')}</div>
+      <div class="card-date">📅 ${t.fechaFin || '—'}</div>
     </div>
-    ${!esTerminado(t.estado) ? `
-      <button class="tiempo-btn ${enSesion ? 'pausar' : 'iniciar'}" onclick="toggleSesion(event,'${t.id}')">
-        ${enSesion ? '⏸ Pausar sesión' : '▶ Iniciar sesión'}
-      </button>` : ''}
+    ${isHoy ? `<label class="check-trabajado" onclick="event.stopPropagation()">
+      <input type="checkbox" ${trabajado ? 'checked' : ''} onchange="toggleTrabajado(event,'${t.id}')">
+      <span class="check-label ${trabajado ? 'done' : ''}">Trabajé en esto hoy</span>
+    </label>` : ''}
     ${showAssign && !isHoy ? `<button class="assign-btn" onclick="toggleHoy(event,'${t.id}')">+ Asignar a hoy</button>` : ''}
     ${showAssign && isHoy ? `<button class="assign-btn assigned" onclick="toggleHoy(event,'${t.id}')">✓ Asignado a hoy</button>` : ''}
   </div>`;
@@ -1094,6 +1120,7 @@ function toggleSesionModal(id) {
 function saveTodayAssigned() {
   const today = new Date().toLocaleDateString('es-AR');
   localStorage.setItem('mant_today_assigned', JSON.stringify(todayAssigned));
+  localStorage.setItem('mant_today_trabajado', JSON.stringify(trabajadoHoy));
   localStorage.setItem('mant_today_date', today);
 }
 
@@ -1102,11 +1129,94 @@ function loadTodayAssigned() {
   const savedDate = localStorage.getItem('mant_today_date');
   if (savedDate === today) {
     const saved = localStorage.getItem('mant_today_assigned');
+    const savedTrabajado = localStorage.getItem('mant_today_trabajado');
+    trabajadoHoy = savedTrabajado ? JSON.parse(savedTrabajado) : [];
     return saved ? JSON.parse(saved) : [];
   }
   localStorage.removeItem('mant_today_assigned');
+  localStorage.removeItem('mant_today_trabajado');
   localStorage.removeItem('mant_today_date');
+  trabajadoHoy = [];
   return [];
+}
+
+function toggleTrabajado(e, id) {
+  e.stopPropagation();
+  const idx = trabajadoHoy.indexOf(id);
+  if (idx === -1) {
+    // Mostrar modal de avance obligatorio
+    mostrarModalAvance(id);
+  } else {
+    // Destildar
+    trabajadoHoy.splice(idx, 1);
+    saveTodayAssigned();
+    sincronizarTrabajado(id, false);
+    renderContent();
+    showToast('Desmarcado', '');
+  }
+}
+
+function mostrarModalAvance(id) {
+  const ticket = tickets.find(t => t.id === id);
+  if (!ticket) return;
+  const overlay = document.getElementById('avance-overlay');
+  document.getElementById('avance-ticket-id').textContent = id;
+  document.getElementById('avance-ticket-desc').textContent = ticket.desc;
+  document.getElementById('avance-texto').value = '';
+  document.getElementById('avance-error').textContent = '';
+  overlay.classList.add('open');
+  window._avancePendienteId = id;
+  setTimeout(() => document.getElementById('avance-texto').focus(), 300);
+}
+
+function confirmarAvance() {
+  const texto = document.getElementById('avance-texto').value.trim();
+  if (!texto) {
+    document.getElementById('avance-error').textContent = 'Escribí qué avances hiciste antes de confirmar.';
+    return;
+  }
+  const id = window._avancePendienteId;
+  const ticket = tickets.find(t => t.id === id);
+  if (!ticket) return;
+
+  // Agregar nota al historial
+  const now = new Date();
+  const fecha = now.toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric'})
+    + ' ' + now.toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit'});
+  const autor = currentRole === 'gerente' ? 'Gerente' : 'Técnico';
+  if (!ticket.notas) ticket.notas = [];
+  ticket.notas.unshift({ autor, fecha, texto: '📅 Avance del día: ' + texto });
+  const ticketIdx = tickets.findIndex(t => t.id === id);
+  if (ticketIdx !== -1) tickets[ticketIdx] = { ...ticket };
+
+  // Marcar como trabajado
+  trabajadoHoy.push(id);
+  saveTodayAssigned();
+  sincronizarTrabajado(id, true);
+
+  // Sincronizar nota con Sheet
+  if (scriptUrl) {
+    syncToSheet(ticket).catch(() => {});
+  }
+
+  cerrarModalAvance();
+  renderContent();
+  showToast('Avance registrado ✓', 'success');
+}
+
+function cerrarModalAvance() {
+  document.getElementById('avance-overlay').classList.remove('open');
+  window._avancePendienteId = null;
+}
+
+function sincronizarTrabajado(id, trabajado) {
+  if (!scriptUrl) return;
+  const callbackName = 'trabajadoCallback_' + Date.now();
+  const url = scriptUrl + '?action=toggleTrabajado&id=' + encodeURIComponent(id) + '&trabajado=' + trabajado + '&callback=' + callbackName;
+  window[callbackName] = function() { delete window[callbackName]; };
+  const script = document.createElement('script');
+  script.src = url;
+  document.head.appendChild(script);
 }
 
 function toggleHoy(e, id) {
@@ -1328,6 +1438,10 @@ async function syncToSheet(ticket) {
   await fetch(url, { mode: 'no-cors' });
 }
 
+function cerrarAvanceOnBg(e) {
+  if (e.target === document.getElementById('avance-overlay')) cerrarModalAvance();
+}
+
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
   selectedTicket = null;
@@ -1370,6 +1484,7 @@ async function fetchFromSheet() {
           if (data && data.tickets && data.tickets.length > 0) {
             tickets = data.tickets;
             todayAssigned = tickets.filter(t => t.asignadoHoy).map(t => t.id);
+            trabajadoHoy  = tickets.filter(t => t.trabajadoHoy).map(t => t.id);
             saveTodayAssigned();
             renderContent();
             showToast('Sheet sincronizado ✓', 'success');
