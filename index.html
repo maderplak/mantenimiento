@@ -607,6 +607,7 @@ let currentTab = 'pendientes';
 let currentFilter = 'todos';
 let tickets = [];
 let todayAssigned = [];
+let sesionActiva = null;
 let scriptUrl = 'https://script.google.com/macros/s/AKfycbzkjBPgPl4ZPAqB4rBp6p8pij4oVOoNlfMXaDz5h_7XB_o6e2ya66izRgCncKZHdHBD/exec';
 let sheetName = 'Respuestas de formulario 1';
 let selectedTicket = null;
@@ -1005,7 +1006,6 @@ function ticketCard(t, showAssign) {
 }
 
 // ─── SESIONES DE TIEMPO ───────────────────────────
-let sesionActiva = null; // { id, inicio }
 
 function toggleSesion(e, id) {
   e.stopPropagation();
